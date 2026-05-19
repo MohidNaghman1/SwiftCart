@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %} Admin Dashboard - SwiftCart
+{%endblock %}
+ {% block content %}
+<section class="page-header">
+  <h1 class="page-title">Admin Dashboard</h1>
+  <p class="page-subtitle">
+    Manage products, categories, orders, and users from one place.
+  </p>
+</section>
+
+<section class="grid grid-3">
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Total Products</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">{{ total_products }}</h2>
+    </div>
+  </article>
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Total Orders</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">{{ total_orders }}</h2>
+    </div>
+  </article>
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Total Users</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">{{ total_users }}</h2>
+    </div>
+  </article>
+</section>
+
+<section style="margin-top: 24px" class="card">
+  <div class="card-inner">
+    <h2 style="margin-top: 0">Quick Links</h2>
+    <div class="card-actions">
+      <a class="btn btn-primary" href="/admin-dashboard/products/">Products</a>
+      <a class="btn btn-secondary" href="/admin-dashboard/categories/"
+        >Categories</a
+      >
+      <a class="btn btn-success" href="/admin-dashboard/orders/">Orders</a>
+      <a class="btn btn-danger" href="/admin-dashboard/users/">Users</a>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAdmin();
+</script>
+{% endblock %}

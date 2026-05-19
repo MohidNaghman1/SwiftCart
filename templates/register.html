@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+ {% block title %}Register - SwiftCart{% endblock %}
+  {%block content %}
+<section class="auth-card card">
+  <div class="card-inner">
+    <div class="page-header">
+      <h1 class="page-title">Create your account</h1>
+      <p class="page-subtitle">Join SwiftCart and start shopping in seconds.</p>
+    </div>
+
+    <div
+      id="registerInlineError"
+      class="alert alert-danger"
+      style="display: none"
+    ></div>
+
+    <form id="registerForm" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div>
+          <label class="label" for="username">Username</label>
+          <input
+            class="field"
+            id="username"
+            name="username"
+            autocomplete="username"
+            required
+          />
+        </div>
+        <div>
+          <label class="label" for="email">Email</label>
+          <input
+            class="field"
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+          />
+        </div>
+        <div>
+          <label class="label" for="first_name">First name</label>
+          <input class="field" id="first_name" name="first_name" />
+        </div>
+        <div>
+          <label class="label" for="last_name">Last name</label>
+          <input class="field" id="last_name" name="last_name" />
+        </div>
+        <div>
+          <label class="label" for="password">Password</label>
+          <input
+            class="field"
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+        </div>
+        <div>
+          <label class="label" for="password2">Confirm password</label>
+          <input
+            class="field"
+            id="password2"
+            name="password2"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+        </div>
+        <div class="full">
+          <label class="label" for="profile_image">Profile image</label>
+          <input
+            class="field"
+            id="profile_image"
+            name="profile_image"
+            type="file"
+            accept="image/*"
+          />
+          <p class="help-text">
+            Upload an optional avatar. It will be stored in your profile.
+          </p>
+        </div>
+      </div>
+
+      <div
+        style="
+          margin-top: 20px;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        "
+      >
+        <button class="btn btn-primary" type="submit">Create account</button>
+        <a class="btn btn-secondary" href="/login/">Already have an account?</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  const auth = window.SwiftCartUI.getAuthState();
+  if (auth.token) {
+    window.location.href = auth.isStaff ? "/admin-dashboard/" : "/products/";
+  }
+
+  const form = document.getElementById("registerForm");
+  const errorBox = document.getElementById("registerInlineError");
+
+  const fieldLabels = {
+    username: "Username",
+    email: "Email",
+    password: "Password",
+    password2: "Confirm password",
+    first_name: "First name",
+    last_name: "Last name",
+    profile_image: "Profile image",
+  };
+
+  function showErrors(errors) {
+    const messages = [];
+    Object.entries(errors || {}).forEach(([field, value]) => {
+      const label = fieldLabels[field] || field;
+      if (Array.isArray(value)) {
+        messages.push(`${label}: ${value.join(", ")}`);
+      } else if (typeof value === "object" && value !== null) {
+        messages.push(`${label}: ${Object.values(value).flat().join(", ")}`);
+      } else {
+        messages.push(`${label}: ${value}`);
+      }
+    });
+    errorBox.textContent = messages.join(" • ");
+    errorBox.style.display = messages.length ? "block" : "none";
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorBox.style.display = "none";
+
+    const payload = new FormData(form);
+    const response = await fetch("/api/users/register/", {
+      method: "POST",
+      body: payload,
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.status) {
+      const details = data.data?.details || {};
+      localStorage.setItem("access_token", data.data?.access_token || "");
+      localStorage.setItem("refresh_token", data.data?.refresh_token || "");
+      localStorage.setItem(
+        "is_staff",
+        String(details.is_staff ?? data.data?.is_staff ?? false),
+      );
+      localStorage.setItem("username", details.username || form.username.value);
+      window.SwiftCartUI.showFlash("Registration successful.", "success");
+      window.location.href =
+        (details.is_staff ?? data.data?.is_staff)
+          ? "/admin-dashboard/"
+          : "/products/";
+      return;
+    }
+
+    showErrors(data.data?.details || data.details || {});
+    if (!errorBox.textContent) {
+      errorBox.textContent = data.msg || "Registration failed.";
+      errorBox.style.display = "block";
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+ {% block title %}
+ Checkout - SwiftCart
+ {% endblock %}
+{%block content %}
+<section class="auth-card card">
+  <div class="card-inner">
+    <div class="page-header">
+      <h1 class="page-title">Checkout</h1>
+      <p class="page-subtitle">We are preparing your secure payment session.</p>
+    </div>
+
+    <div class="placeholder-box" id="checkoutMessage">
+      Redirecting to Stripe Checkout...
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAuth();
+
+  const params = new URLSearchParams(window.location.search);
+  const checkoutUrl = params.get("checkout_url");
+  const message = document.getElementById("checkoutMessage");
+
+  if (checkoutUrl) {
+    window.location.href = checkoutUrl;
+  } else {
+    message.textContent =
+      "Your checkout is created directly from the products page. If you reached this page manually, please go back to Products.";
+  }
+</script>
+{% endblock %}

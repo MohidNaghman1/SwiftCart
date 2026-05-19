@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}
+Admin Users - SwiftCart
+{% endblock %}
+{% block content %}
+<section class="page-header">
+  <h1 class="page-title">Users</h1>
+  <p class="page-subtitle">View all registered users in the system.</p>
+</section>
+
+<section class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Name</th>
+        <th>Staff</th>
+        <th>Active</th>
+        <th>Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>#{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>
+          <span
+            class="status-pill {% if user.is_staff %}paid{% else %}pending{% endif %}"
+          >
+            {% if user.is_staff %}Staff{% else %}User{% endif %}
+          </span>
+        </td>
+        <td>
+          <span
+            class="status-pill {% if user.is_active %}paid{% else %}cancelled{% endif %}"
+          >
+            {% if user.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </td>
+        <td>{{ user.date_joined|date:'Y-m-d H:i' }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">No users found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAdmin();
+</script>
+{% endblock %}

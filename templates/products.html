@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+ {% block title %}Products - SwiftCart{% endblock %}
+  {%block content %}
+<section class="page-header">
+  <h1 class="page-title">Browse Products</h1>
+  <p class="page-subtitle">
+    Choose your favorites and check out securely through Stripe.
+  </p>
+</section>
+
+<section class="grid grid-3" id="productsGrid">
+  <div class="placeholder-box">Loading products...</div>
+</section>
+
+<section id="my-orders" style="margin-top: 30px" class="section-stack">
+  <div class="page-header">
+    <h2 class="page-title" style="font-size: 1.5rem">My Orders</h2>
+    <p class="page-subtitle">Only your own orders are shown here.</p>
+  </div>
+
+  <section class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th>Payment Method</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="ordersRows">
+        <tr>
+          <td colspan="5">Loading your orders...</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAuth();
+  if (isAdmin()) {
+    window.location.href = "/admin-dashboard/";
+  }
+
+  const headers = authHeaders();
+  const placeholderImage =
+    "data:image/svg+xml;charset=UTF-8," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" rx="28" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">No image</text></svg>`,
+    );
+
+  async function loadProducts() {
+    const response = await fetch("/api/products/", { headers });
+    if (response.status === 401) {
+      window.location.href = "/login/";
+      return [];
+    }
+    const data = await response.json();
+    return data.data?.details || [];
+  }
+
+  async function loadMyOrders() {
+    const response = await fetch("/api/orders/", { headers });
+    if (response.status === 401) {
+      window.location.href = "/login/";
+      return [];
+    }
+    const data = await response.json();
+    return data.data?.details || [];
+  }
+
+  function renderProducts(products) {
+    const grid = document.getElementById("productsGrid");
+    if (!products.length) {
+      grid.innerHTML =
+        '<div class="placeholder-box">No products available right now.</div>';
+      return;
+    }
+
+    grid.innerHTML = products
+      .map((product) => {
+        const image = product.image || placeholderImage;
+        return `
+        <article class="card product-card">
+          <img class="card-media" src="${window.SwiftCartUI.escapeHtml(image)}" alt="${window.SwiftCartUI.escapeHtml(product.name)}" />
+          <div class="card-inner">
+            <h3 style="margin-top:0;">${window.SwiftCartUI.escapeHtml(product.name)}</h3>
+            <p class="muted">${window.SwiftCartUI.escapeHtml(product.description || "")}</p>
+            <div class="card-actions" style="justify-content:space-between; align-items:center;">
+              <span class="card-price">$${window.SwiftCartUI.escapeHtml(product.price)}</span>
+              <span class="muted">Stock: ${window.SwiftCartUI.escapeHtml(product.stock)}</span>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-primary" type="button" ${Number(product.stock) <= 0 ? "disabled" : ""} data-order-id="${product.id}" data-order-name="${window.SwiftCartUI.escapeHtml(product.name)}" data-order-stock="${window.SwiftCartUI.escapeHtml(product.stock)}">${Number(product.stock) <= 0 ? "Out of Stock" : "Order Now"}</button>
+            </div>
+          </div>
+        </article>
+      `;
+      })
+      .join("");
+
+    grid.querySelectorAll("[data-order-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        orderProduct(
+          Number(button.dataset.orderId),
+          button.dataset.orderName,
+          Number(button.dataset.orderStock),
+        ),
+      );
+    });
+  }
+
+  function renderOrders(orders) {
+    const rows = document.getElementById("ordersRows");
+    if (!orders.length) {
+      rows.innerHTML = '<tr><td colspan="5">You have no orders yet.</td></tr>';
+      return;
+    }
+
+    rows.innerHTML = orders
+      .map(
+        (order) => `
+      <tr>
+        <td>#${order.id}</td>
+        <td><span class="status-pill ${order.status}">${window.SwiftCartUI.escapeHtml(order.status)}</span></td>
+        <td>$${window.SwiftCartUI.escapeHtml(order.total_amount)}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.payment_method || 'N/A')}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.created_at)}</td>
+      </tr>
+    `,
+      )
+      .join("");
+  }
+
+  async function orderProduct(productId, productName, availableStock) {
+    const qtyInput = prompt(
+      `How many "${productName}" would you like?\nAvailable: ${availableStock}`,
+      "1",
+    );
+    if (qtyInput === null) return;
+
+    const qty = Number(qtyInput);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      window.SwiftCartUI.showFlash(
+        "Please enter a valid positive whole number.",
+        "error",
+      );
+      return;
+    }
+
+    if (qty > availableStock) {
+      window.SwiftCartUI.showFlash(
+        `Only ${availableStock} item(s) available.`,
+        "error",
+      );
+      return;
+    }
+
+    const response = await fetch("/api/orders/create-checkout/", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ items: [{ product: productId, quantity: qty }] }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.status) {
+      window.location.href = data.data?.checkout_url;
+      return;
+    }
+
+    window.SwiftCartUI.showFlash(
+      data.msg || "Unable to start checkout.",
+      "error",
+    );
+  }
+
+  Promise.all([loadProducts(), loadMyOrders()])
+    .then(([products, orders]) => {
+      renderProducts(products);
+      renderOrders(orders);
+    })
+    .catch(() =>
+      window.SwiftCartUI.showFlash("Unable to load products.", "error"),
+    );
+</script>
+{% endblock %}

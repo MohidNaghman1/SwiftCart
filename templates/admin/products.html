@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% block title %}
+Admin Products - SwiftCart
+{% endblock%}
+{% block content %}
+<section class="page-header">
+  <h1 class="page-title">Products</h1>
+  <p class="page-subtitle">Create, edit, delete, and activate products.</p>
+</section>
+
+<div class="toolbar">
+  <div class="left">
+    <button class="btn btn-primary" type="button" id="addProductBtn">
+      Add Product
+    </button>
+    <button class="btn btn-secondary" type="button" id="refreshBtn">
+      Refresh
+    </button>
+  </div>
+  <div class="right">
+    <span class="muted" id="productCount"></span>
+  </div>
+</div>
+
+<section class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Active</th>
+        <th>Image</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="productRows">
+      <tr>
+        <td colspan="7">Loading products...</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="modal-backdrop" id="productModalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="productModalTitle" style="margin: 0">Add Product</h2>
+    </div>
+    <form id="productForm">
+      <div class="modal-body">
+        <input type="hidden" id="productId" />
+        <div class="form-grid">
+          <div>
+            <label class="label" for="productName">Name</label>
+            <input class="field" id="productName" name="name" required />
+          </div>
+          <div>
+            <label class="label" for="productPrice">Price</label>
+            <input
+              class="field"
+              id="productPrice"
+              name="price"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+            />
+          </div>
+          <div class="full">
+            <label class="label" for="productDescription">Description</label>
+            <textarea
+              class="textarea"
+              id="productDescription"
+              name="description"
+              required
+            ></textarea>
+          </div>
+          <div>
+            <label class="label" for="productStock">Stock</label>
+            <input
+              class="field"
+              id="productStock"
+              name="stock"
+              type="number"
+              min="0"
+              required
+            />
+          </div>
+          <div>
+            <label class="label" for="productCategory">Category</label>
+            <select class="select" id="productCategory" name="category">
+              <option value="">No category</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="productImage">Image</label>
+            <input
+              class="field"
+              id="productImage"
+              name="image"
+              type="file"
+              accept="image/*"
+            />
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 10px">
+            <label
+              style="
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                font-weight: 700;
+              "
+            >
+              <input
+                type="checkbox"
+                id="productIsActive"
+                name="is_active"
+                checked
+              />
+              Active
+            </label>
+          </div>
+        </div>
+        <p
+          class="alert alert-danger"
+          id="productFormError"
+          style="display: none"
+        ></p>
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn btn-secondary"
+          type="button"
+          id="closeProductModalBtn"
+        >
+          Cancel
+        </button>
+        <button class="btn btn-primary" type="submit" id="saveProductBtn">
+          Save Product
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  requireAdmin();
+
+  const token = getToken();
+  const productRows = document.getElementById("productRows");
+  const productCount = document.getElementById("productCount");
+  const productModalBackdrop = document.getElementById("productModalBackdrop");
+  const productForm = document.getElementById("productForm");
+  const productFormError = document.getElementById("productFormError");
+  const productModalTitle = document.getElementById("productModalTitle");
+  const productId = document.getElementById("productId");
+  const categorySelect = document.getElementById("productCategory");
+  let categoryMap = {};
+
+  const placeholderImage =
+    "data:image/svg+xml;charset=UTF-8," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" rx="24" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">No image</text></svg>`,
+    );
+
+  const headers = authHeaders();
+
+  function openModal(edit = false) {
+    productModalTitle.textContent = edit ? "Edit Product" : "Add Product";
+    productModalBackdrop.classList.add("open");
+  }
+
+  function closeModal() {
+    productModalBackdrop.classList.remove("open");
+    productForm.reset();
+    productId.value = "";
+    productFormError.style.display = "none";
+  }
+
+  document
+    .getElementById("addProductBtn")
+    .addEventListener("click", () => openModal(false));
+  document
+    .getElementById("closeProductModalBtn")
+    .addEventListener("click", closeModal);
+  document.getElementById("refreshBtn").addEventListener("click", loadAll);
+  productModalBackdrop.addEventListener("click", (event) => {
+    if (event.target === productModalBackdrop) closeModal();
+  });
+
+  async function loadCategories() {
+    const response = await fetch("/api/products/categories/", { headers });
+    const data = await response.json();
+    const categories = data.data?.details || [];
+    categoryMap = Object.fromEntries(
+      categories.map((category) => [String(category.id), category.name]),
+    );
+    categorySelect.innerHTML =
+      '<option value="">No category</option>' +
+      categories
+        .map(
+          (category) =>
+            `<option value="${category.id}">${window.SwiftCartUI.escapeHtml(category.name)}</option>`,
+        )
+        .join("");
+  }
+
+  async function loadProducts() {
+    const response = await fetch("/api/products/", { headers });
+    if (response.status === 401) {
+      window.location.href = "/login/";
+      return [];
+    }
+    const data = await response.json();
+    return data.data?.details || [];
+  }
+
+  function renderProducts(products) {
+    productCount.textContent = `${products.length} product(s)`;
+    if (!products.length) {
+      productRows.innerHTML =
+        '<tr><td colspan="7">No products found.</td></tr>';
+      return;
+    }
+
+    productRows.innerHTML = products
+      .map((product) => {
+        const image = product.image || placeholderImage;
+        const categoryName = categoryMap[String(product.category)] || "—";
+        const activeText = product.is_active ? "Active" : "Inactive";
+        return `
+        <tr>
+          <td>${window.SwiftCartUI.escapeHtml(product.name)}</td>
+          <td>${window.SwiftCartUI.escapeHtml(categoryName)}</td>
+          <td>$${window.SwiftCartUI.escapeHtml(product.price)}</td>
+          <td>${window.SwiftCartUI.escapeHtml(product.stock)}</td>
+          <td>
+            <button class="btn ${product.is_active ? "btn-success" : "btn-secondary"}" type="button" data-toggle-id="${product.id}" data-toggle-state="${product.is_active}">${activeText}</button>
+          </td>
+          <td><img src="${window.SwiftCartUI.escapeHtml(image)}" alt="${window.SwiftCartUI.escapeHtml(product.name)}" style="width:72px;height:72px;object-fit:cover;border-radius:14px;border:1px solid #e5e7eb;" /></td>
+          <td>
+            <div class="card-actions">
+              <button class="btn btn-secondary" type="button" data-edit-id="${product.id}">Edit</button>
+              <button class="btn btn-danger" type="button" data-delete-id="${product.id}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    productRows.querySelectorAll("[data-edit-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        editProduct(Number(button.dataset.editId), products),
+      );
+    });
+    productRows.querySelectorAll("[data-delete-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        deleteProduct(Number(button.dataset.deleteId)),
+      );
+    });
+    productRows.querySelectorAll("[data-toggle-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        toggleProductActive(
+          Number(button.dataset.toggleId),
+          button.dataset.toggleState === "true",
+        ),
+      );
+    });
+  }
+
+  function editProduct(id, products) {
+    const product = products.find((item) => item.id === id);
+    if (!product) return;
+    productId.value = product.id;
+    document.getElementById("productName").value = product.name || "";
+    document.getElementById("productDescription").value =
+      product.description || "";
+    document.getElementById("productPrice").value = product.price || "";
+    document.getElementById("productStock").value = product.stock || "";
+    document.getElementById("productIsActive").checked = Boolean(
+      product.is_active,
+    );
+    categorySelect.value = product.category || "";
+    openModal(true);
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm("Delete this product?")) return;
+    const response = await fetch(`/api/products/${id}/`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (response.ok) {
+      window.SwiftCartUI.showFlash("Product deleted successfully.", "success");
+      loadAll();
+    } else {
+      window.SwiftCartUI.showFlash("Unable to delete product.", "error");
+    }
+  }
+
+  async function toggleProductActive(id, currentState) {
+    const response = await fetch(`/api/products/${id}/`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer " + token },
+      body: (() => {
+        const formData = new FormData();
+        formData.append("is_active", String(!currentState));
+        return formData;
+      })(),
+    });
+    if (response.ok) {
+      window.SwiftCartUI.showFlash("Product updated successfully.", "success");
+      loadAll();
+    } else {
+      window.SwiftCartUI.showFlash("Unable to update product.", "error");
+    }
+  }
+
+  productForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    productFormError.style.display = "none";
+
+    const formData = new FormData(productForm);
+    formData.set(
+      "is_active",
+      document.getElementById("productIsActive").checked ? "true" : "false",
+    );
+    if (!formData.get("category")) formData.delete("category");
+    if (!document.getElementById("productImage").files.length) {
+      formData.delete("image");
+    }
+
+    const id = productId.value;
+    const response = await fetch(
+      id ? `/api/products/${id}/` : "/api/products/",
+      {
+        method: id ? "PATCH" : "POST",
+        headers: { Authorization: "Bearer " + token },
+        body: formData,
+      },
+    );
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data.status !== false) {
+      window.SwiftCartUI.showFlash(
+        id ? "Product updated successfully." : "Product created successfully.",
+        "success",
+      );
+      closeModal();
+      loadAll();
+      return;
+    }
+    productFormError.style.display = "block";
+    productFormError.textContent = data.msg || "Unable to save product.";
+  });
+
+  async function loadAll() {
+    await loadCategories();
+    const products = await loadProducts();
+    renderProducts(products);
+  }
+
+  loadAll().catch(() =>
+    window.SwiftCartUI.showFlash("Unable to load products.", "error"),
+  );
+</script>
+{% endblock %}

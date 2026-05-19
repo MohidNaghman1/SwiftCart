@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% block title %}
+Admin Orders - SwiftCart
+{% endblock%}
+{% block content %}
+<section class="page-header">
+  <h1 class="page-title">Orders</h1>
+  <p class="page-subtitle">
+    Review every order and inspect the items inside each one.
+  </p>
+</section>
+
+<div class="toolbar">
+  <div class="left">
+    <select class="select" id="statusFilter" style="min-width: 220px">
+      <option value="all">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="paid">Paid</option>
+      <option value="deliverd">Deliverd</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+    <button class="btn btn-secondary" type="button" id="refreshOrdersBtn">
+      Refresh
+    </button>
+  </div>
+  <div class="right">
+    <span class="muted" id="orderCount"></span>
+  </div>
+</div>
+
+<section class="grid grid-2">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>User</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th>Payment Method</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="orderRows">
+        <tr>
+          <td colspan="6">Loading orders...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="card">
+    <div class="card-inner">
+      <h2 style="margin-top: 0">Order Details</h2>
+      <div id="orderDetailPanel" class="placeholder-box">
+        Select an order to see the items.
+      </div>
+    </div>
+  </section>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAdmin();
+
+  const token = getToken();
+  const headers = authHeaders();
+  const orderRows = document.getElementById("orderRows");
+  const orderDetailPanel = document.getElementById("orderDetailPanel");
+  const orderCount = document.getElementById("orderCount");
+  const statusFilter = document.getElementById("statusFilter");
+  let allOrders = [];
+  let productMap = {};
+
+  document
+    .getElementById("refreshOrdersBtn")
+    .addEventListener("click", loadAll);
+  statusFilter.addEventListener("change", renderOrders);
+
+  function statusBadge(status) {
+    return `<span class="status-pill ${status}">${window.SwiftCartUI.escapeHtml(status)}</span>`;
+  }
+
+  async function loadProducts() {
+    const response = await fetch("/api/products/", { headers });
+    const data = await response.json();
+    const products = data.data?.details || [];
+    productMap = Object.fromEntries(
+      products.map((product) => [String(product.id), product.name]),
+    );
+  }
+
+  async function loadOrders() {
+    const response = await fetch("/api/orders/", { headers });
+    if (response.status === 401) {
+      window.location.href = "/login/";
+      return [];
+    }
+    const data = await response.json();
+    return data.data?.details || [];
+  }
+
+  function renderOrders() {
+    const selected = statusFilter.value;
+    const orders =
+      selected === "all"
+        ? allOrders
+        : allOrders.filter((order) => order.status === selected);
+    orderCount.textContent = `${orders.length} order(s)`;
+
+    if (!orders.length) {
+      orderRows.innerHTML = '<tr><td colspan="6">No orders found.</td></tr>';
+      orderDetailPanel.innerHTML =
+        '<div class="placeholder-box">No order selected.</div>';
+      return;
+    }
+
+    orderRows.innerHTML = orders
+      .map(
+        (order) => `
+      <tr data-order-id="${order.id}" style="cursor:pointer;">
+        <td>#${order.id}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.user)}</td>
+        <td>${statusBadge(order.status)}</td>
+        <td>$${window.SwiftCartUI.escapeHtml(order.total_amount)}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.payment_method || 'N/A')}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.created_at)}</td>
+      </tr>
+    `,
+      )
+      .join("");
+
+    orderRows.querySelectorAll("[data-order-id]").forEach((row) => {
+      row.addEventListener("click", () =>
+        showOrderDetail(
+          orders.find((order) => String(order.id) === row.dataset.orderId),
+        ),
+      );
+    });
+  }
+
+  function showOrderDetail(order) {
+    if (!order) return;
+    const items = order.items || [];
+    orderDetailPanel.innerHTML = `
+      <div class="order-detail">
+        <div class="card-actions" style="justify-content:space-between;">
+          <strong>Order #${order.id}</strong>
+          ${statusBadge(order.status)}
+        </div>
+        <p class="muted" style="margin:0;">User: ${window.SwiftCartUI.escapeHtml(order.user)}</p>
+        <p class="muted" style="margin:0;">Total: $${window.SwiftCartUI.escapeHtml(order.total_amount)}</p>
+        <p class="muted" style="margin:0;">Payment Method: ${window.SwiftCartUI.escapeHtml(order.payment_method || 'N/A')}</p>
+        <p class="muted" style="margin:0;">Created: ${window.SwiftCartUI.escapeHtml(order.created_at)}</p>
+        <h3 style="margin:12px 0 0;">Items</h3>
+        ${
+          items.length
+            ? items
+                .map((item) => {
+                  const productName =
+                    productMap[String(item.product)] ||
+                    `Product #${item.product}`;
+                  return `<div class="order-item"><div><strong>${window.SwiftCartUI.escapeHtml(productName)}</strong><div class="muted">Quantity: ${window.SwiftCartUI.escapeHtml(item.quantity)}</div></div><div>$${window.SwiftCartUI.escapeHtml(item.price_at_purchase)}</div></div>`;
+                })
+                .join("")
+            : '<div class="placeholder-box">No items available.</div>'
+        }
+        ${
+          (order.status === 'pending' || order.status === 'paid')
+            ? `<div style="margin-top: 16px;">
+                 <button class="btn btn-primary" id="deliverOrderBtn" data-order-id="${order.id}">Deliver</button>
+               </div>`
+            : ''
+        }
+      </div>
+    `;
+
+    const deliverBtn = orderDetailPanel.querySelector("#deliverOrderBtn");
+    if (deliverBtn) {
+      deliverBtn.addEventListener("click", async () => {
+        const orderId = deliverBtn.dataset.orderId;
+        deliverBtn.disabled = true;
+        try {
+          const response = await fetch(`/api/orders/${orderId}/`, {
+            method: "PATCH",
+            headers: {
+              ...headers,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "deliverd" })
+          });
+          const data = await response.json();
+          if (response.ok && data.status) {
+            window.SwiftCartUI.showFlash("Order marked as delivered successfully.", "success");
+            await loadAll();
+            const updatedOrder = allOrders.find(o => String(o.id) === String(orderId));
+            showOrderDetail(updatedOrder);
+          } else {
+            window.SwiftCartUI.showFlash(data.msg || "Failed to deliver order.", "error");
+            deliverBtn.disabled = false;
+          }
+        } catch (e) {
+          window.SwiftCartUI.showFlash("Failed to deliver order.", "error");
+          deliverBtn.disabled = false;
+        }
+      });
+    }
+  }
+
+  async function loadAll() {
+    await loadProducts();
+    allOrders = await loadOrders();
+    renderOrders();
+  }
+
+  loadAll().catch(() =>
+    window.SwiftCartUI.showFlash("Unable to load orders.", "error"),
+  );
+</script>
+{% endblock %}

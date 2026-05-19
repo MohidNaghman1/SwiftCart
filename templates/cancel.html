@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+ {% block title %}
+ Payment Cancelled - SwiftCart
+{%endblock %}
+{% block content %}
+<section class="auth-card card">
+  <div class="card-inner">
+    <div class="page-header">
+      <h1 class="page-title" id="message">Cancelling payment...</h1>
+      <p class="page-subtitle" id="sub">
+        We are cleaning up your Stripe checkout session.
+      </p>
+    </div>
+    <a class="btn btn-primary" href="/products/">Back to Products</a>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAuth();
+
+  async function cancelPayment() {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    const message = document.getElementById("message");
+    const sub = document.getElementById("sub");
+
+    if (sessionId) {
+      await fetch(`/api/orders/cancel/?session_id=${sessionId}`);
+    }
+
+    message.textContent = "Payment cancelled.";
+    sub.textContent = "Nothing was stored, so there is no order to restore.";
+    window.SwiftCartUI.showFlash("Checkout cancelled.", "error");
+  }
+
+  cancelPayment().catch(() => {
+    document.getElementById("message").textContent = "Payment cancelled.";
+    document.getElementById("sub").textContent = "Nothing was stored.";
+  });
+</script>
+{% endblock %}

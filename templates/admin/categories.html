@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+ {% block title %}Admin Categories - SwiftCart
+ {%endblock %} {% block content %}
+<section class="page-header">
+  <h1 class="page-title">Categories</h1>
+  <p class="page-subtitle">Organize products into clean, manageable groups.</p>
+</section>
+
+<div class="toolbar">
+  <div class="left">
+    <button class="btn btn-primary" type="button" id="addCategoryBtn">
+      Add Category
+    </button>
+    <button class="btn btn-secondary" type="button" id="refreshCategoriesBtn">
+      Refresh
+    </button>
+  </div>
+  <div class="right">
+    <span class="muted" id="categoryCount"></span>
+  </div>
+</div>
+
+<section class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Created At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="categoryRows">
+      <tr>
+        <td colspan="4">Loading categories...</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="modal-backdrop" id="categoryModalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="categoryModalTitle" style="margin: 0">Add Category</h2>
+    </div>
+    <form id="categoryForm">
+      <div class="modal-body">
+        <input type="hidden" id="categoryId" />
+        <div class="form-grid">
+          <div>
+            <label class="label" for="categoryName">Name</label>
+            <input class="field" id="categoryName" name="name" required />
+          </div>
+          <div class="full">
+            <label class="label" for="categoryDescription">Description</label>
+            <textarea
+              class="textarea"
+              id="categoryDescription"
+              name="description"
+            ></textarea>
+          </div>
+        </div>
+        <p
+          class="alert alert-danger"
+          id="categoryFormError"
+          style="display: none"
+        ></p>
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn btn-secondary"
+          type="button"
+          id="closeCategoryModalBtn"
+        >
+          Cancel
+        </button>
+        <button class="btn btn-primary" type="submit">Save Category</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  requireAdmin();
+
+  const token = getToken();
+  const headers = authHeaders();
+  const categoryRows = document.getElementById("categoryRows");
+  const categoryCount = document.getElementById("categoryCount");
+  const categoryModalBackdrop = document.getElementById(
+    "categoryModalBackdrop",
+  );
+  const categoryForm = document.getElementById("categoryForm");
+  const categoryFormError = document.getElementById("categoryFormError");
+  const categoryModalTitle = document.getElementById("categoryModalTitle");
+  const categoryId = document.getElementById("categoryId");
+
+  function openModal(edit = false) {
+    categoryModalTitle.textContent = edit ? "Edit Category" : "Add Category";
+    categoryModalBackdrop.classList.add("open");
+  }
+
+  function closeModal() {
+    categoryModalBackdrop.classList.remove("open");
+    categoryForm.reset();
+    categoryId.value = "";
+    categoryFormError.style.display = "none";
+  }
+
+  document
+    .getElementById("addCategoryBtn")
+    .addEventListener("click", () => openModal(false));
+  document
+    .getElementById("closeCategoryModalBtn")
+    .addEventListener("click", closeModal);
+  document
+    .getElementById("refreshCategoriesBtn")
+    .addEventListener("click", loadCategories);
+  categoryModalBackdrop.addEventListener("click", (event) => {
+    if (event.target === categoryModalBackdrop) closeModal();
+  });
+
+  async function loadCategories() {
+    const response = await fetch("/api/products/categories/", { headers });
+    if (response.status === 401) {
+      window.location.href = "/login/";
+      return [];
+    }
+    const data = await response.json();
+    const categories = data.data?.details || [];
+    categoryCount.textContent = `${categories.length} category(ies)`;
+
+    if (!categories.length) {
+      categoryRows.innerHTML =
+        '<tr><td colspan="4">No categories found.</td></tr>';
+      return categories;
+    }
+
+    categoryRows.innerHTML = categories
+      .map(
+        (category) => `
+      <tr>
+        <td>${window.SwiftCartUI.escapeHtml(category.name)}</td>
+        <td>${window.SwiftCartUI.escapeHtml(category.description || "—")}</td>
+        <td>${window.SwiftCartUI.escapeHtml(category.created_at || "—")}</td>
+        <td>
+          <div class="card-actions">
+            <button class="btn btn-secondary" type="button" data-edit-id="${category.id}">Edit</button>
+            <button class="btn btn-danger" type="button" data-delete-id="${category.id}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `,
+      )
+      .join("");
+
+    categoryRows.querySelectorAll("[data-edit-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        editCategory(Number(button.dataset.editId), categories),
+      );
+    });
+    categoryRows.querySelectorAll("[data-delete-id]").forEach((button) => {
+      button.addEventListener("click", () =>
+        deleteCategory(Number(button.dataset.deleteId)),
+      );
+    });
+    return categories;
+  }
+
+  function editCategory(id, categories) {
+    const category = categories.find((item) => item.id === id);
+    if (!category) return;
+    categoryId.value = category.id;
+    document.getElementById("categoryName").value = category.name || "";
+    document.getElementById("categoryDescription").value =
+      category.description || "";
+    openModal(true);
+  }
+
+  async function deleteCategory(id) {
+    if (!confirm("Delete this category?")) return;
+    const response = await fetch(`/api/products/categories/${id}/`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (response.ok) {
+      window.SwiftCartUI.showFlash("Category deleted successfully.", "success");
+      loadCategories();
+    } else {
+      window.SwiftCartUI.showFlash("Unable to delete category.", "error");
+    }
+  }
+
+  categoryForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    categoryFormError.style.display = "none";
+
+    const payload = {
+      name: document.getElementById("categoryName").value,
+      description: document.getElementById("categoryDescription").value,
+    };
+
+    const id = categoryId.value;
+    const response = await fetch(
+      id ? `/api/products/categories/${id}/` : "/api/products/categories/",
+      {
+        method: id ? "PATCH" : "POST",
+        headers,
+        body: JSON.stringify(payload),
+      },
+    );
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data.status !== false) {
+      window.SwiftCartUI.showFlash(
+        id
+          ? "Category updated successfully."
+          : "Category created successfully.",
+        "success",
+      );
+      closeModal();
+      loadCategories();
+      return;
+    }
+    categoryFormError.style.display = "block";
+    categoryFormError.textContent = data.msg || "Unable to save category.";
+  });
+
+  loadCategories().catch(() =>
+    window.SwiftCartUI.showFlash("Unable to load categories.", "error"),
+  );
+</script>
+{% endblock %}

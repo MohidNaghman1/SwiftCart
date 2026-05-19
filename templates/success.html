@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+ {% block title %}Payment Successful - SwiftCart
+ {%endblock %}
+  {% block content %}
+<section class="auth-card card">
+  <div class="card-inner">
+    <div class="page-header">
+      <h1 class="page-title" id="message">Verifying payment...</h1>
+      <p class="page-subtitle" id="sub">
+        Please wait while we confirm your Stripe session.
+      </p>
+    </div>
+    <a class="btn btn-primary" href="/products/">Back to Products</a>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  requireAuth();
+
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  if (!sessionId) {
+    document.getElementById("message").textContent = "No session found.";
+    document.getElementById("sub").textContent = "Please return to Products and try again.";
+  } else {
+    // Show "⏳ Payment Processing... Please wait" UI immediately
+    document.getElementById("message").textContent = "⏳ Payment Processing...";
+    document.getElementById("sub").textContent = "Please wait while we confirm your Stripe session.";
+
+    // Call POST /api/orders/success/?session_id=...
+    fetch(`/api/orders/success/?session_id=${sessionId}`, {
+      method: "POST",
+      headers: authHeaders()
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.status) {
+          document.getElementById("message").textContent = "Error initiating payment verification.";
+          document.getElementById("sub").textContent = data.msg || "Please contact support.";
+          return;
+        }
+
+        // Start polling GET /api/orders/status/<session_id>/ every 2 seconds
+        let pollInterval;
+        const startTime = Date.now();
+
+        function pollStatus() {
+          const elapsedTime = Date.now() - startTime;
+          if (elapsedTime >= 30000) {
+            clearInterval(pollInterval);
+            document.getElementById("message").textContent = "⚠️ Taking longer than expected";
+            document.getElementById("sub").textContent = "Please check your Orders page to verify the status.";
+            window.SwiftCartUI.showFlash("Taking longer than expected. Please check your orders page.", "warning");
+            return;
+          }
+
+          fetch(`/api/orders/status/${sessionId}/`, {
+            headers: authHeaders()
+          })
+            .then((res) => res.json())
+            .then((statusData) => {
+              if (statusData.status) {
+                const currentStatus = statusData.data.status;
+                if (currentStatus === "pending") {
+                  clearInterval(pollInterval);
+                  document.getElementById("message").textContent = "✅ Order Confirmed!";
+                  document.getElementById("sub").textContent = `Order #${statusData.data.order_id} has been successfully placed.`;
+                  window.SwiftCartUI.showFlash("Payment confirmed successfully.", "success");
+                } else if (currentStatus === "cancelled") {
+                  clearInterval(pollInterval);
+                  document.getElementById("message").textContent = "❌ Payment Failed";
+                  document.getElementById("sub").textContent = "Your payment was not successful. Please try again.";
+                  window.SwiftCartUI.showFlash("Payment was cancelled or failed.", "error");
+                }
+              }
+            })
+            .catch(() => {
+              // ignore transient errors and continue polling
+            });
+        }
+
+        pollInterval = setInterval(pollStatus, 2000);
+        pollStatus(); // Run immediately on load
+      })
+      .catch(() => {
+        document.getElementById("message").textContent = "Something went wrong.";
+        document.getElementById("sub").textContent = "Please refresh the page or return to Products.";
+      });
+  }
+</script>
+{% endblock %}

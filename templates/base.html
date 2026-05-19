@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}SwiftCart{% endblock %}</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --surface-alt: #f8fafc;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --nav-bg: #0f172a;
+        --nav-text: #f8fafc;
+        --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      body {
+        padding-top: 78px;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .navbar {
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        background: rgba(15, 23, 42, 0.96);
+        color: var(--nav-text);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        z-index: 1000;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+        font-size: 1.1rem;
+      }
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #60a5fa, #2563eb);
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .nav-pill {
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--nav-text);
+        transition: all 0.2s ease;
+      }
+      .nav-pill:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-1px);
+      }
+      .nav-pill.primary {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+
+      .page-shell {
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+      .page-header {
+        margin-bottom: 22px;
+      }
+      .page-title {
+        margin: 0;
+        font-size: clamp(1.6rem, 2vw, 2.2rem);
+        line-height: 1.1;
+      }
+      .page-subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      .card-inner {
+        padding: 24px;
+      }
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .btn {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        font-weight: 700;
+        border-radius: 12px;
+        padding: 12px 18px;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease,
+          background 0.2s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        transform: none;
+      }
+      .btn-primary {
+        color: #fff;
+        background: var(--primary);
+        box-shadow: 0 10px 18px rgba(37, 99, 235, 0.2);
+      }
+      .btn-primary:hover {
+        background: var(--primary-dark);
+      }
+      .btn-success {
+        color: #fff;
+        background: var(--success);
+      }
+      .btn-danger {
+        color: #fff;
+        background: var(--danger);
+      }
+      .btn-secondary {
+        color: var(--text);
+        background: #e5e7eb;
+      }
+
+      .field,
+      .select,
+      .textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        background: #fff;
+        outline: none;
+      }
+      .textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+      .label {
+        display: block;
+        margin: 0 0 8px;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .form-grid .full {
+        grid-column: 1 / -1;
+      }
+      .help-text,
+      .muted {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .alert {
+        padding: 14px 16px;
+        border-radius: 14px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+      .alert-danger {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger);
+        border: 1px solid rgba(220, 38, 38, 0.15);
+      }
+      .flash-stack {
+        position: fixed;
+        top: 94px;
+        right: 20px;
+        z-index: 1100;
+        display: grid;
+        gap: 10px;
+        width: min(420px, calc(100vw - 40px));
+      }
+      .flash {
+        background: rgba(15, 23, 42, 0.96);
+        color: #fff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: var(--shadow);
+      }
+      .flash.success {
+        background: rgba(22, 163, 74, 0.96);
+      }
+      .flash.error {
+        background: rgba(220, 38, 38, 0.96);
+      }
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 720px;
+      }
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      th {
+        background: #f8fafc;
+        font-size: 0.88rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+      tbody tr:nth-child(even) {
+        background: #fbfdff;
+      }
+      tbody tr:hover {
+        background: #f8fbff;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      .status-pill.pending {
+        background: rgba(217, 119, 6, 0.12);
+        color: var(--warning);
+      }
+      .status-pill.paid {
+        background: rgba(22, 163, 74, 0.12);
+        color: var(--success);
+      }
+      .status-pill.cancelled {
+        background: rgba(220, 38, 38, 0.12);
+        color: var(--danger);
+      }
+      .status-pill.deliverd,
+      .status-pill.delivered,
+      .status-pill.deliver {
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--primary);
+      }
+      .card-media {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 16px;
+        background: #eef2ff;
+        border: 1px solid var(--border);
+      }
+      .card-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .card-price {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--primary);
+      }
+      .section-stack {
+        display: grid;
+        gap: 24px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .toolbar .left,
+      .toolbar .right {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 1200;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .modal {
+        width: min(760px, 100%);
+        max-height: 90vh;
+        overflow: auto;
+        background: var(--surface);
+        border-radius: 22px;
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
+        border: 1px solid var(--border);
+      }
+      .modal-header,
+      .modal-footer {
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-footer {
+        border-top: 1px solid var(--border);
+        border-bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      .modal-body {
+        padding: 22px;
+      }
+      .placeholder-box {
+        border: 1px dashed var(--border);
+        border-radius: 16px;
+        background: var(--surface-alt);
+        padding: 24px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .order-detail {
+        display: grid;
+        gap: 10px;
+      }
+      .order-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+      }
+      .auth-card {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      @media (max-width: 900px) {
+        .grid-4,
+        .grid-3,
+        .grid-2,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .navbar {
+          padding: 0 16px;
+          height: auto;
+          min-height: 78px;
+          align-items: flex-start;
+          padding-top: 14px;
+          padding-bottom: 14px;
+          gap: 12px;
+          flex-direction: column;
+        }
+        body {
+          padding-top: 114px;
+        }
+      }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header class="navbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">S</span>
+        <span>SwiftCart</span>
+      </a>
+      <nav class="nav-links" id="navLinks"></nav>
+    </header>
+
+    <div class="flash-stack" id="flashStack" aria-live="polite"></div>
+
+    <main class="page-shell">{% block content %}{% endblock %}</main>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+      const SwiftCartUI = (() => {
+        const getAuthState = () => ({
+          token: getToken(),
+          refreshToken: localStorage.getItem("refresh_token"),
+          isStaff: isAdmin(),
+          username: localStorage.getItem("username") || "",
+        });
+
+        const escapeHtml = (value) =>
+          String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+
+        const showFlash = (message, type = "success", timeout = 3200) => {
+          const stack = document.getElementById("flashStack");
+          if (!stack) return;
+          const el = document.createElement("div");
+          el.className = `flash ${type}`;
+          el.textContent = message;
+          stack.appendChild(el);
+          window.setTimeout(() => {
+            el.style.opacity = "0";
+            el.style.transform = "translateY(-4px)";
+            el.style.transition = "all 0.2s ease";
+          }, timeout);
+          window.setTimeout(() => el.remove(), timeout + 250);
+        };
+
+        const requireAuth = ({
+          staffOnly = false,
+          loginRedirect = "/login/",
+          staffRedirect = "/products/",
+        } = {}) => {
+          const auth = getAuthState();
+          if (!auth.token) {
+            window.location.href = loginRedirect;
+            return null;
+          }
+          if (staffOnly && !auth.isStaff) {
+            window.location.href = staffRedirect;
+            return null;
+          }
+          return auth;
+        };
+
+        const renderNavbar = () => {
+          const nav = document.getElementById("navLinks");
+          if (!nav) return;
+          const currentPath = window.location.pathname;
+
+          if (!isLoggedIn()) {
+            nav.innerHTML = `
+              <a class="nav-pill${currentPath === "/login/" || currentPath === "/" ? " primary" : ""}" href="/login/">Login</a>
+              <a class="nav-pill${currentPath === "/register/" ? " primary" : ""}" href="/register/">Register</a>
+            `;
+            return;
+          }
+
+          if (isAdmin()) {
+            nav.innerHTML = `
+              <a class="nav-pill${currentPath.startsWith("/admin-dashboard/") ? " primary" : ""}" href="/admin-dashboard/">Dashboard</a>
+              <a class="nav-pill" href="/admin-dashboard/products/">Products</a>
+              <a class="nav-pill" href="/admin-dashboard/categories/">Categories</a>
+              <a class="nav-pill" href="/admin-dashboard/orders/">Orders</a>
+              <a class="nav-pill" href="/admin-dashboard/users/">Users</a>
+              <button class="nav-pill" type="button" id="logoutBtn">Logout</button>
+            `;
+          } else {
+            nav.innerHTML = `
+              <a class="nav-pill${currentPath === "/products/" ? " primary" : ""}" href="/products/">Products</a>
+              <a class="nav-pill" href="/products/#my-orders">My Orders</a>
+              <button class="nav-pill" type="button" id="logoutBtn">Logout</button>
+            `;
+          }
+
+          const logoutBtn = document.getElementById("logoutBtn");
+          if (logoutBtn) logoutBtn.addEventListener("click", logout);
+        };
+
+        document.addEventListener("DOMContentLoaded", renderNavbar);
+        return {
+          getAuthState,
+          escapeHtml,
+          showFlash,
+          requireAuth,
+          renderNavbar,
+        };
+      })();
+
+      window.SwiftCartUI = SwiftCartUI;
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
+

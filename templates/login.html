@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - SwiftCart{% endblock %}
+
+{% block content %}
+<section class="auth-card card">
+  <div class="card-inner">
+    <div class="page-header">
+      <h1 class="page-title">Welcome back</h1>
+      <p class="page-subtitle">
+        Log in to continue shopping or manage the store.
+      </p>
+    </div>
+
+    <div id="loginInlineError" class="alert alert-danger" style="display:none"></div>
+
+    <form id="loginForm">
+      <div class="form-grid">
+        <div class="full">
+          <label class="label" for="username">Username</label>
+          <input class="field" id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="full">
+          <label class="label" for="password">Password</label>
+          <input class="field" id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-primary" type="submit">Login</button>
+        <a class="btn btn-secondary" href="/register/">Create an account</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const auth = window.SwiftCartUI.getAuthState();
+  if (auth.token) {
+    window.location.href = auth.isStaff ? "/admin-dashboard/" : "/products/";
+  }
+
+  const form = document.getElementById("loginForm");
+  const errorBox = document.getElementById("loginInlineError");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorBox.style.display = "none";
+
+    const response = await fetch("/api/users/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: form.username.value,
+        password: form.password.value,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data.status) {
+      const details = data.data?.details || {};
+      localStorage.setItem("access_token", data.data?.access_token || "");
+      localStorage.setItem("refresh_token", data.data?.refresh_token || "");
+      localStorage.setItem("is_staff", String(details.is_staff ?? false));
+      localStorage.setItem("username", details.username || form.username.value);
+      window.SwiftCartUI.showFlash("Login successful.", "success");
+      window.location.href = details.is_staff ? "/admin-dashboard/" : "/products/";
+      return;
+    }
+
+    errorBox.textContent = data.msg || "Invalid username or password.";
+    errorBox.style.display = "block";
+  });
+</script>
+{% endblock %}
