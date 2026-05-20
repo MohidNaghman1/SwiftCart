@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<script src="https://js.stripe.com/v3/"></script>
 <style>
     .dashboard-container {
         max-width: 800px;
@@ -90,6 +91,54 @@
         margin-top: 16px;
         font-size: 14px;
     }
+
+    .btn-preview, .btn-confirm {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-preview:hover, .btn-confirm:hover {
+        background: #2563eb;
+    }
+
+    .btn-confirm {
+        width: 100%;
+        margin-top: 16px;
+        padding: 12px;
+    }
+
+    .breakdown-panel {
+        display: none;
+        background: rgba(30, 41, 59, 0.5);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        margin-top: 16px;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .breakdown-panel.not-eligible {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 4px solid #f59e0b;
+        color: #fcd34d;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-msg {
+        color: #ef4444;
+        margin-top: 8px;
+        font-size: 14px;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -115,8 +164,35 @@
     </div>
     
     {% if membership.status == "active" %}
+    
+    <hr style="border: 0; border-top: 1px solid rgba(148, 163, 184, 0.2); margin: 40px 0;">
+    <h2 class="dashboard-title" style="font-size: 24px; margin-bottom: 24px;">Switch Plan</h2>
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 40px;">
+        {% for plan in plans %}
+            {% if plan.id != membership.plan.id %}
+            <div style="background: rgba(0, 0, 0, 0.2); padding: 24px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600;">{{ plan.name }}</h3>
+                        <div style="color: #94a3b8; font-size: 14px; margin-top: 4px;">${{ plan.price }} &bull; 
+                            {% if plan.duration_months == 1 %}Monthly{% elif plan.duration_months == 6 %}Every 6 months{% elif plan.duration_months == 12 %}Yearly{% else %}Every {{ plan.duration_months }} months{% endif %}
+                        </div>
+                    </div>
+                    <button class="btn-preview" data-plan-id="{{ plan.id }}">Preview</button>
+                </div>
+                <div id="breakdown-{{ plan.id }}" class="breakdown-panel"></div>
+                <div id="switch-error-{{ plan.id }}" class="error-msg"></div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
     <button class="btn-cancel" id="btn-cancel-membership">Cancel membership</button>
     <div id="cancel-error"></div>
+    {% else %}
+    <div style="margin-top: 24px;">
+        <a href="{% url 'memberships:plans' %}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 600;">Select Plan / Retry Payment</a>
+    </div>
     {% endif %}
     
     {% else %}
@@ -144,6 +220,107 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         return cookieValue;
     }
+
+    const stripe = typeof Stripe !== 'undefined' ? Stripe("{{ stripe_publishable_key }}") : null;
+    let elements = null;
+    let cardElement = null;
+
+    document.querySelectorAll('.btn-preview').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const planId = e.target.getAttribute('data-plan-id');
+            const breakdownPanel = document.getElementById(`breakdown-${planId}`);
+            const paymentContainer = document.getElementById(`payment-${planId}`);
+            
+            if (breakdownPanel.style.display === 'block') {
+                breakdownPanel.style.display = 'none';
+                paymentContainer.style.display = 'none';
+                e.target.textContent = 'Preview';
+                return;
+            }
+
+            e.target.disabled = true;
+            e.target.textContent = 'Loading...';
+
+            try {
+                const response = await fetch("{% url 'memberships:switch-preview' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": getCookie("csrftoken")
+                    },
+                    body: `new_plan_id=${planId}`
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Preview failed");
+                }
+
+                if (data.is_eligible) {
+                    breakdownPanel.className = 'breakdown-panel';
+                    breakdownPanel.innerHTML = `
+                        <div style="margin-bottom: 8px;">Remaining credit: $${data.unused_value}</div>
+                        <div style="margin-bottom: 8px;">New plan price: $${data.new_plan_price}</div>
+                        <div style="margin-bottom: 16px; font-weight: bold; color: white;">Amount due today: $${data.amount_due}</div>
+                        <div style="margin-bottom: 16px; color: #94a3b8; font-size: 14px;">Days remaining on current plan: ${data.days_remaining}</div>
+                        <button class="btn-confirm" data-plan-id="${planId}">Confirm Switch</button>
+                    `;
+                } else {
+                    breakdownPanel.className = 'breakdown-panel not-eligible';
+                    breakdownPanel.innerHTML = `<div>${data.message}</div>`;
+                }
+
+                breakdownPanel.style.display = 'block';
+                e.target.textContent = 'Hide Preview';
+
+            } catch (err) {
+                alert(err.message);
+                e.target.textContent = 'Preview';
+            } finally {
+                e.target.disabled = false;
+            }
+        });
+    });
+
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('btn-confirm')) {
+            const btn = e.target;
+            const planId = btn.getAttribute('data-plan-id');
+            const paymentContainer = document.getElementById(`payment-${planId}`);
+            const errorDiv = document.getElementById(`switch-error-${planId}`);
+            
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            errorDiv.textContent = '';
+
+            try {
+                const response = await fetch("{% url 'memberships:switch-confirm' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": getCookie("csrftoken")
+                    },
+                    body: `new_plan_id=${planId}`
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Confirmation failed");
+                }
+
+                btn.textContent = 'Plan switched successfully!';
+                btn.style.background = '#10b981';
+                setTimeout(() => window.location.reload(), 2000);
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                btn.disabled = false;
+                btn.textContent = 'Confirm Switch';
+            }
+        }
+    });
 
     const btnCancel = document.getElementById("btn-cancel-membership");
     const cancelError = document.getElementById("cancel-error");
