@@ -2,7 +2,6 @@ import json
 import logging
 from decimal import Decimal
 
-# pyrefly: ignore [missing-import]
 import stripe
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -29,6 +28,19 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 User = get_user_model()
 
 
+def _metadata_value(metadata, key, default=None):
+	if not metadata:
+		return default
+	if isinstance(metadata, dict):
+		return metadata.get(key, default)
+	return getattr(metadata, key, default)
+
+
+def _is_membership_checkout(data_object):
+	metadata = getattr(data_object, 'metadata', None)
+	return _metadata_value(metadata, 'purpose') == 'membership' or getattr(data_object, 'mode', None) == 'subscription'
+
+
 # Manage order listing, retrieval, and admin updates only.
 class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
 	queryset = Order.objects.select_related('user').prefetch_related('items__product').all()
@@ -47,7 +59,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Upda
 		if user.is_authenticated and user.is_staff:
 			return queryset
 		if user.is_authenticated:
-			return queryset.filter(user=user)
+			return queryset.filter(user=user, items__isnull=False).distinct()
 		return queryset.none()
 
 	# Return standardized order lists.
@@ -338,6 +350,10 @@ class StripeWebhookView(APIView):
 				payment_status = getattr(data_object, 'payment_status', None)
 				logger.info(f"StripeWebhookView: checkout.session.completed. session_id: {session_id}, payment_status: {payment_status}, order_found: {order is not None}")
 
+				if _is_membership_checkout(data_object):
+					logger.info(f"StripeWebhookView: Ignoring membership checkout session {session_id} in order webhook.")
+					return api_response(True, "Membership checkout ignored by order webhook", http_status=status.HTTP_200_OK)
+
 				if payment_status == 'paid':
 					if order:
 						logger.info(f"StripeWebhookView: Order found. Current status: {order.status}")
@@ -356,13 +372,16 @@ class StripeWebhookView(APIView):
 					else:
 						# Fallback safety: order doesn't exist yet (webhook arrived before success redirect)
 						metadata = getattr(data_object, 'metadata', None)
-						user_id = getattr(metadata, 'user_id', None) if metadata else None
-						items_raw = getattr(metadata, 'items', '[]') if metadata else '[]'
+						user_id = _metadata_value(metadata, 'user_id')
+						items_raw = _metadata_value(metadata, 'items', '[]')
 						logger.info(f"StripeWebhookView: Fallback trigger. user_id: {user_id}")
 						if user_id:
 							try:
 								user = User.objects.get(pk=user_id)
 								items_data = json.loads(items_raw)
+								if not isinstance(items_data, list) or not items_data:
+									logger.info(f"StripeWebhookView: No order items present for session {session_id}; skipping fallback order creation.")
+									return api_response(True, "No order items to create", http_status=status.HTTP_200_OK)
 								
 								payment_intent_id = getattr(data_object, 'payment_intent', None)
 								payment_method_type = 'card'
@@ -416,13 +435,16 @@ class StripeWebhookView(APIView):
 					else:
 						# Fallback safety: create pending
 						metadata = getattr(data_object, 'metadata', None)
-						user_id = getattr(metadata, 'user_id', None) if metadata else None
-						items_raw = getattr(metadata, 'items', '[]') if metadata else '[]'
+						user_id = _metadata_value(metadata, 'user_id')
+						items_raw = _metadata_value(metadata, 'items', '[]')
 						logger.info(f"StripeWebhookView: Fallback unpaid order creation. user_id: {user_id}")
 						if user_id:
 							try:
 								user = User.objects.get(pk=user_id)
 								items_data = json.loads(items_raw)
+								if not isinstance(items_data, list) or not items_data:
+									logger.info(f"StripeWebhookView: No order items present for session {session_id}; skipping fallback unpaid order creation.")
+									return api_response(True, "No order items to create", http_status=status.HTTP_200_OK)
 								with transaction.atomic():
 									order = Order.objects.create(
 										user=user,

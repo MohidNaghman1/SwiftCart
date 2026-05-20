@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .success-container {
+        max-width: 600px;
+        margin: 80px auto;
+        padding: 40px;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 24px;
+        text-align: center;
+        color: #f8fafc;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+    }
+    
+    .success-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 16px;
+    }
+    
+    .success-text {
+        font-size: 16px;
+        color: #94a3b8;
+        margin-bottom: 32px;
+    }
+</style>
+
+<div class="success-container">
+    <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+    </div>
+    <h1 class="success-title">Membership activated</h1>
+    <p class="success-text">Your plan is now active. Redirecting to dashboard in 3 seconds...</p>
+</div>
+
+<script>
+    setTimeout(() => {
+        window.location.href = "{% url 'memberships:dashboard' %}";
+    }, 3000);
+</script>
+{% endblock %}

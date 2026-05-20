@@ -1,7 +1,5 @@
-{% extends 'base.html' %}
-{% block title %} Admin Dashboard - SwiftCart
-{%endblock %}
- {% block content %}
+{% extends 'base.html' %} {% block title %} Admin Dashboard - SwiftCart
+{%endblock %} {% block content %}
 <section class="page-header">
   <h1 class="page-title">Admin Dashboard</h1>
   <p class="page-subtitle">
@@ -28,6 +26,39 @@
       <h2 style="margin: 8px 0 0; font-size: 2rem">{{ total_users }}</h2>
     </div>
   </article>
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Active Memberships</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">{{ active_memberships }}</h2>
+    </div>
+  </article>
+</section>
+
+<section class="grid grid-3" style="margin-top: 24px">
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Membership Plans</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">
+        {{ total_membership_plans }}
+      </h2>
+    </div>
+  </article>
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Pending Memberships</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">
+        {{ pending_memberships }}
+      </h2>
+    </div>
+  </article>
+  <article class="card">
+    <div class="card-inner">
+      <p class="muted">Expired Memberships</p>
+      <h2 style="margin: 8px 0 0; font-size: 2rem">
+        {{ expired_memberships }}
+      </h2>
+    </div>
+  </article>
 </section>
 
 <section style="margin-top: 24px" class="card">
@@ -40,6 +71,9 @@
       >
       <a class="btn btn-success" href="/admin-dashboard/orders/">Orders</a>
       <a class="btn btn-danger" href="/admin-dashboard/users/">Users</a>
+      <a class="btn btn-primary" href="/admin-dashboard/memberships/"
+        >Memberships</a
+      >
     </div>
   </div>
 </section>

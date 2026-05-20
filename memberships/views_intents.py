@@ -1,6 +1,6 @@
 import logging
+import stripe
 from dateutil.relativedelta import relativedelta
-from stripe.error import SignatureVerificationError
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -68,7 +68,7 @@ class StripeWebhookView(View):
 
         try:
             event = stripe_service.verify_webhook(payload, sig_header)
-        except SignatureVerificationError:
+        except stripe.error.SignatureVerificationError:
             return HttpResponse(status=400)
 
         event_type = event.type

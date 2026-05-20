@@ -24,10 +24,14 @@ function logout() {
 
 // Auth headers for fetch.
 function authHeaders() {
-  return {
-    'Authorization': 'Bearer ' + getToken(),
+  const headers = {
     'Content-Type': 'application/json',
   }
+  const token = getToken()
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token
+  }
+  return headers
 }
 
 // Guard for normal user pages.
