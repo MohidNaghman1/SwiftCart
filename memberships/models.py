@@ -72,3 +72,26 @@ class MembershipPayment(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.amount} ({self.status})"
+
+
+class PlanSwitchRecord(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    from_plan = models.ForeignKey(
+        MembershipPlan,
+        related_name="switches_from",
+        on_delete=models.PROTECT,
+    )
+    to_plan = models.ForeignKey(
+        MembershipPlan,
+        related_name="switches_to",
+        on_delete=models.PROTECT,
+    )
+    amount_paid = models.DecimalField(max_digits=8, decimal_places=2)
+    credit_applied = models.DecimalField(max_digits=8, decimal_places=2)
+    switched_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.from_plan.name} to {self.to_plan.name}"
