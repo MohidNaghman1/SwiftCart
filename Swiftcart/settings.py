@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import stripe
+import os
 from decouple import config
 
 # Base
@@ -111,6 +112,11 @@ SIMPLE_JWT = {
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+
+STRIPE_MONTHLY_PRICE_ID = config("STRIPE_MONTHLY_PRICE_ID", default="")
+STRIPE_SIX_MONTH_PRICE_ID = config("STRIPE_SIX_MONTH_PRICE_ID", default="")
+STRIPE_YEARLY_PRICE_ID = config("STRIPE_YEARLY_PRICE_ID", default="")
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 CORS_ALLOW_ALL_ORIGINS = True
