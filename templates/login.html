@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
-
-{% block title %}Login - SwiftCart{% endblock %}
-
-{% block content %}
+ {% block title %}Login - SwiftCart{% endblock %}
+  {%block content %}
 <section class="auth-card card">
   <div class="card-inner">
     <div class="page-header">
@@ -12,34 +10,65 @@
       </p>
     </div>
 
-    <div id="loginInlineError" class="alert alert-danger" style="display:none"></div>
+    <div
+      id="loginInlineError"
+      class="alert alert-danger"
+      style="display: none"
+    ></div>
 
     <form id="loginForm">
       <div class="form-grid">
         <div class="full">
           <label class="label" for="username">Username</label>
-          <input class="field" id="username" name="username" autocomplete="username" required />
+          <input
+            class="field"
+            id="username"
+            name="username"
+            autocomplete="username"
+            required
+          />
         </div>
         <div class="full">
           <label class="label" for="password">Password</label>
-          <input class="field" id="password" name="password" type="password" autocomplete="current-password" required />
+          <input
+            class="field"
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
         </div>
       </div>
 
-      <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+      <div
+        style="
+          margin-top: 20px;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        "
+      >
         <button class="btn btn-primary" type="submit">Login</button>
         <a class="btn btn-secondary" href="/register/">Create an account</a>
       </div>
     </form>
   </div>
 </section>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
+  const nextPath = new URLSearchParams(window.location.search).get("next");
+  const safeRedirect = (path, fallback) =>
+    typeof path === "string" && path.startsWith("/") ? path : fallback;
+
   const auth = window.SwiftCartUI.getAuthState();
   if (auth.token) {
-    window.location.href = auth.isStaff ? "/admin-dashboard/" : "/products/";
+    const destination = safeRedirect(
+      nextPath,
+      auth.isStaff ? "/admin-dashboard/" : "/products/",
+    );
+    window.location.href = destination;
   }
 
   const form = document.getElementById("loginForm");
@@ -66,7 +95,11 @@
       localStorage.setItem("is_staff", String(details.is_staff ?? false));
       localStorage.setItem("username", details.username || form.username.value);
       window.SwiftCartUI.showFlash("Login successful.", "success");
-      window.location.href = details.is_staff ? "/admin-dashboard/" : "/products/";
+      const destination = safeRedirect(
+        nextPath,
+        details.is_staff ? "/admin-dashboard/" : "/products/",
+      );
+      window.location.href = destination;
       return;
     }
 

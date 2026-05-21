@@ -1,6 +1,6 @@
 from Swiftcart.utils import api_response
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Category, Product
 from .permissions import IsAdminUser
@@ -9,10 +9,10 @@ from .serializers import CategorySerializer, ProductSerializer
 
 # Share common CRUD permission handling across product viewsets.
 class StaffWritePermissionsMixin:
-    # Allow authenticated reads and staff-only writes.
+    # Allow public reads and staff-only writes.
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [AllowAny]
         else:
             permission_classes = [IsAuthenticated, IsAdminUser]
         return [permission() for permission in permission_classes]

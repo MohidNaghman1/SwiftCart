@@ -1,6 +1,5 @@
-{% extends 'base.html' %}
- {% block title %}Products - SwiftCart{% endblock %}
-  {%block content %}
+{% extends 'base.html' %} {% block title %}Products - SwiftCart{% endblock %}
+{%block content %}
 <section class="page-header">
   <h1 class="page-title">Browse Products</h1>
   <p class="page-subtitle">
@@ -39,12 +38,12 @@
 </section>
 {% endblock %} {% block scripts %}
 <script>
-  requireAuth();
-  if (isAdmin()) {
+  const token = getToken();
+
+  if (token && isAdmin()) {
     window.location.href = "/admin-dashboard/";
   }
 
-  const headers = authHeaders();
   const placeholderImage =
     "data:image/svg+xml;charset=UTF-8," +
     encodeURIComponent(
@@ -52,19 +51,30 @@
     );
 
   async function loadProducts() {
-    const response = await fetch("/api/products/", { headers });
-    if (response.status === 401) {
-      window.location.href = "/login/";
-      return [];
-    }
+    const response = await fetch("/api/products/");
     const data = await response.json();
     return data.data?.details || [];
   }
 
   async function loadMyOrders() {
-    const response = await fetch("/api/orders/", { headers });
+    if (!token) {
+      const rows = document.getElementById("ordersRows");
+      rows.innerHTML =
+        '<tr><td colspan="5">Log in to see your orders.</td></tr>';
+      return [];
+    }
+
+    const response = await fetch("/api/orders/", { headers: authHeaders() });
     if (response.status === 401) {
-      window.location.href = "/login/";
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("is_staff");
+      localStorage.removeItem("username");
+      window.SwiftCartUI.showFlash(
+        "Your session expired. Please log in again.",
+        "warning",
+      );
+      window.location.href = "/login/?next=/products/";
       return [];
     }
     const data = await response.json();
@@ -126,7 +136,7 @@
         <td>#${order.id}</td>
         <td><span class="status-pill ${order.status}">${window.SwiftCartUI.escapeHtml(order.status)}</span></td>
         <td>$${window.SwiftCartUI.escapeHtml(order.total_amount)}</td>
-        <td>${window.SwiftCartUI.escapeHtml(order.payment_method || 'N/A')}</td>
+        <td>${window.SwiftCartUI.escapeHtml(order.payment_method || "N/A")}</td>
         <td>${window.SwiftCartUI.escapeHtml(order.created_at)}</td>
       </tr>
     `,
@@ -135,6 +145,11 @@
   }
 
   async function orderProduct(productId, productName, availableStock) {
+    if (!token) {
+      window.location.href = "/login/?next=/products/";
+      return;
+    }
+
     const qtyInput = prompt(
       `How many "${productName}" would you like?\nAvailable: ${availableStock}`,
       "1",
@@ -160,7 +175,7 @@
 
     const response = await fetch("/api/orders/create-checkout/", {
       method: "POST",
-      headers,
+      headers: authHeaders(),
       body: JSON.stringify({ items: [{ product: productId, quantity: qty }] }),
     });
     const data = await response.json().catch(() => ({}));

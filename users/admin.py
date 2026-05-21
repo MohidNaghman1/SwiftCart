@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
+from memberships.models import UserMembership
 from orders.models import Order, OrderItem
 from .models import CustomUser
 
@@ -21,6 +22,13 @@ class OrderInline(admin.TabularInline):
     readonly_fields = ('id', 'status', 'stripe_session_id', 'created_at')
     can_delete = False
     show_change_link = True
+
+
+# Inline to show membership inside a user
+class UserMembershipInline(admin.StackedInline):
+    model = UserMembership
+    can_delete = False
+    readonly_fields = ('stripe_subscription_id', 'stripe_customer_id', 'created_at', 'updated_at')
 
 
 # Form for creating a new user in admin
@@ -60,7 +68,7 @@ class CustomUserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    inlines = [OrderInline]
+    inlines = [OrderInline, UserMembershipInline]
 
     readonly_fields = ('date_joined', 'last_login')
 

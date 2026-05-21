@@ -1,6 +1,7 @@
 from django.views.generic import TemplateView
 
 from orders.models import Order
+from memberships.models import MembershipPayment, MembershipPlan, UserMembership
 from products.models import Product
 from users.models import CustomUser
 
@@ -49,6 +50,10 @@ class AdminDashboardView(TemplateView):
 		context['total_products'] = Product.objects.count()
 		context['total_orders'] = Order.objects.count()
 		context['total_users'] = CustomUser.objects.count()
+		context['total_membership_plans'] = MembershipPlan.objects.count()
+		context['active_memberships'] = UserMembership.objects.filter(status='active').count()
+		context['pending_memberships'] = UserMembership.objects.filter(status='pending').count()
+		context['expired_memberships'] = UserMembership.objects.filter(status='expired').count()
 		return context
 
 
@@ -74,6 +79,23 @@ class AdminUsersPageView(TemplateView):
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		context['users'] = CustomUser.objects.order_by('-date_joined')
+		return context
+
+
+# Render the admin memberships page with membership, plan, and payment summaries.
+class AdminMembershipsPageView(TemplateView):
+	template_name = 'admin/memberships.html'
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['plans'] = MembershipPlan.objects.order_by('price')
+		context['memberships'] = UserMembership.objects.select_related('user', 'plan').order_by('-updated_at')
+		context['payments'] = MembershipPayment.objects.select_related('user', 'membership', 'membership__plan').order_by('-created_at')[:20]
+		context['total_plans'] = MembershipPlan.objects.count()
+		context['active_memberships'] = UserMembership.objects.filter(status='active').count()
+		context['pending_memberships'] = UserMembership.objects.filter(status='pending').count()
+		context['expired_memberships'] = UserMembership.objects.filter(status='expired').count()
+		context['cancelled_memberships'] = UserMembership.objects.filter(status='cancelled').count()
 		return context
 
 

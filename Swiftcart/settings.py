@@ -1,5 +1,6 @@
 """Django settings for Swiftcart project."""
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
     'users',
     'products',
     'orders',
+    'memberships',
 ]
 AUTH_USER_MODEL = 'users.CustomUser'
 
@@ -89,6 +91,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/products/'
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
@@ -112,11 +116,6 @@ SIMPLE_JWT = {
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
-
-STRIPE_MONTHLY_PRICE_ID = config("STRIPE_MONTHLY_PRICE_ID", default="")
-STRIPE_SIX_MONTH_PRICE_ID = config("STRIPE_SIX_MONTH_PRICE_ID", default="")
-STRIPE_YEARLY_PRICE_ID = config("STRIPE_YEARLY_PRICE_ID", default="")
-
 stripe.api_key = STRIPE_SECRET_KEY
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -152,5 +151,10 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'memberships': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
-}
+}

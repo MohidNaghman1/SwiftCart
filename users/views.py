@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.contrib.auth import login
 
 from Swiftcart.utils import api_response, build_absolute_uri
 from .serializers import RegisterSerializer
@@ -40,6 +41,7 @@ class RegisterView(UserDetailMixin, APIView):
             return api_response(False, 'Registration failed', {'details': serializer.errors}, http_status=400)
 
         user = serializer.save()
+        login(request, user)
         refresh = RefreshToken.for_user(user)
         return api_response(
             True,
@@ -64,6 +66,7 @@ class CustomTokenObtainPairView(UserDetailMixin, TokenObtainPairView):
             return api_response(False, 'Invalid credentials', {'details': {}}, http_status=401)
 
         user = serializer.user
+        login(request, user)
         return api_response(
             True,
             'Login successful',

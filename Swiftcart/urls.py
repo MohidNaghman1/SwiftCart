@@ -8,6 +8,7 @@ from django.urls import include, path
 from .views import (
     AdminCategoriesPageView,
     AdminDashboardView,
+    AdminMembershipsPageView,
     AdminOrdersPageView,
     AdminProductsPageView,
     AdminUsersPageView,
@@ -30,6 +31,7 @@ urlpatterns = [
     path('success/', SuccessPageView.as_view(), name='success'),
     path('cancel/', CancelPageView.as_view(), name='cancel'),
     path('admin-dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),
+    path('admin-dashboard/memberships/', AdminMembershipsPageView.as_view(), name='admin-memberships'),
     path('admin-dashboard/products/', AdminProductsPageView.as_view(), name='admin-products'),
     path('admin-dashboard/categories/', AdminCategoriesPageView.as_view(), name='admin-categories'),
     path('admin-dashboard/orders/', AdminOrdersPageView.as_view(), name='admin-orders'),
@@ -38,6 +40,7 @@ urlpatterns = [
     path('', include('users.urls')),
     path('', include('products.urls')),
     path('', include('orders.urls')),
+    path('memberships/', include('memberships.urls_intents')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

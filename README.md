@@ -2,7 +2,7 @@
 
 SwiftCart is a modern, high-performance e-commerce web application built using **Django** and **Django REST Framework (DRF)** on the backend, with a clean, responsive, and interactive Vanilla JS & CSS frontend. 
 
-It features secure JWT-based user authentication, product catalog management, a dynamic shopping cart, a Stripe payment gateway checkout integration with webhook verification, and a comprehensive Admin Dashboard to process orders and manage delivery states.
+It features secure JWT-based user authentication, product catalog management, a dynamic shopping cart, a Stripe payment gateway checkout integration with webhook verification, a comprehensive Admin Dashboard, and a full-featured Membership Subscription system powered by Stripe Payment Intents.
 
 ---
 
@@ -17,24 +17,30 @@ It features secure JWT-based user authentication, product catalog management, a 
 - **Interactive Browsing**: Responsive grids displaying products, categories, search, and live stock tracking.
 - **Stock Integrity**: Real-time validation checks stock availability prior to initiating checkout and restores stock dynamically if orders are cancelled.
 
-### 3. Stripe Checkout Integration
-- **Pre-filled Checkout**: Automatically pre-fills the customer's email address on the secure, Stripe-hosted payment form.
+### 3. Stripe Checkout & Payment Intents
+- **Subscriptions & Intents**: Seamlessly integrates Stripe Payment Intents for advanced recurring billing and membership upgrades.
+- **Pre-filled Checkout**: Automatically pre-fills the customer's email address on secure payment forms.
 - **Flexible Payments**: Supports card payments and automatically integrates Google Pay.
 - **Success Polling**: An interactive polling system tracking payments securely from the client side.
+
+### 4. Memberships & Subscriptions
+- **Dynamic Plan Switching**: Custom prorated math built-in, enabling users to seamlessly upgrade or downgrade their membership plans mid-cycle.
+- **Stripe Automation**: Triggers native Stripe `customer.subscription.updated` webhooks while keeping exact audit logs (`PlanSwitchRecord`) of credit applied and payments processed.
+- **Interactive Dashboard**: Modern UI for users to preview exact prorated breakdown amounts before committing to a plan switch.
 
 ### 4. Stripe Webhooks (Transaction Safety)
 - Uses secure Stripe webhooks to track payment completion signals asynchronously.
 - Updates order status to `pending` upon successful payment verification.
 - Implements fallback safety handlers to create the order dynamically even if the customer's browser window is closed during redirection.
 
-### 5. Admin Dashboard
-- **Comprehensive Control**: Live listing and detail views of all orders placed.
+### 6. Admin Dashboard
+- **Comprehensive Control**: Live listing and detail views of all orders placed and all membership plans.
 - **Manual Delivery Flow**: Admins can mark orders in the `pending` state as `deliverd` directly from the dashboard using a single-click delivery button.
 - **Filter and Search**: View orders categorized by status (`Pending`, `Paid`, `Deliverd`, `Cancelled`).
 
-### 6. Logging & Debugging
+### 7. Logging & Debugging
 - Structured application-wide logging configured under `settings.py`.
-- Custom `orders` app logging at the `INFO` level to monitor and log checkout flow events, webhook completions, status polling, and admin updates.
+- Custom `orders` and `memberships` app logging at the `INFO` level to monitor and log checkout flow events, webhook completions, status polling, and admin updates.
 
 ---
 
@@ -57,6 +63,12 @@ SwiftCart/
 ├── products/                  # Products & categories app
 │   ├── models.py              # Product & Category models
 │   └── views.py               # Product list & details API
+│
+├── memberships/               # Recurring billing & subscription app
+│   ├── models.py              # UserMembership, MembershipPlan, PlanSwitchRecord
+│   ├── services/              # Plan switch proration & Stripe services
+│   ├── views_intents.py       # Custom Payment Intent views & Webhooks
+│   └── urls_intents.py        # Membership routing
 │
 ├── users/                     # JWT User profiles app
 │   └── models.py              # Custom user profiles
