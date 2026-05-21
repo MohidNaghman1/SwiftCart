@@ -12,13 +12,37 @@ def get_or_create_customer(user):
         metadata={"user_id": str(user.id)}
     )
 
-def create_subscription(customer_id, stripe_price_id):
+def get_or_create_product():
+    products = stripe.Product.search(query="name:'SwiftCart Membership'", limit=1)
+    if products.data:
+        return products.data[0]
+    return stripe.Product.create(name="SwiftCart Membership")
+
+def create_subscription(customer_id, amount_cents, duration_months, metadata=None):
+    product = get_or_create_product()
+    interval = "month"
+    interval_count = duration_months
+    if duration_months == 12:
+        interval_count = 1
+        interval = "year"
+        
     subscription = stripe.Subscription.create(
         customer=customer_id,
-        items=[{"price": stripe_price_id}],
+        items=[{
+            "price_data": {
+                "currency": "usd",
+                "product": product.id,
+                "unit_amount": amount_cents,
+                "recurring": {
+                    "interval": interval,
+                    "interval_count": interval_count,
+                }
+            }
+        }],
         payment_behavior="default_incomplete",
         payment_settings={"save_default_payment_method": "on_subscription"},
-        expand=["latest_invoice.payments"]
+        expand=["latest_invoice.payments"],
+        metadata=metadata or {}
     )
     
     client_secret = None
@@ -26,10 +50,12 @@ def create_subscription(customer_id, stripe_price_id):
     
     if subscription.latest_invoice and subscription.latest_invoice.payments:
         payments_data = subscription.latest_invoice.payments.data
-        if payments_data and payments_data[0].payment and payments_data[0].payment.type == "payment_intent":
+        if payments_data and hasattr(payments_data[0], 'payment') and payments_data[0].payment.type == "payment_intent":
             intent_id = payments_data[0].payment.payment_intent
             intent = stripe.PaymentIntent.retrieve(intent_id)
             client_secret = intent.client_secret
+            if metadata:
+                stripe.PaymentIntent.modify(intent_id, metadata=metadata)
             
     return {
         "subscription_id": subscription.id,

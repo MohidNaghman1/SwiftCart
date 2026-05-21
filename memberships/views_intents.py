@@ -59,8 +59,13 @@ class CreateSubscriptionView(LoginRequiredMixin, View):
             "price": str(plan.price),
         }
 
-        # Create payment intent
-        intent = stripe_service.create_payment_intent(customer.id, usd_cents, metadata=metadata)
+        # Create subscription
+        sub_data = stripe_service.create_subscription(
+            customer_id=customer.id, 
+            amount_cents=usd_cents, 
+            duration_months=plan.duration_months,
+            metadata=metadata
+        )
 
         membership, _ = UserMembership.objects.get_or_create(user=request.user)
         membership.plan = plan
@@ -69,7 +74,8 @@ class CreateSubscriptionView(LoginRequiredMixin, View):
         membership.save()
 
         return JsonResponse({
-            "client_secret": intent.client_secret,
+            "client_secret": sub_data["client_secret"],
+            "subscription_id": sub_data["subscription_id"],
         })
 
 class MembershipSuccessView(LoginRequiredMixin, TemplateView):
@@ -136,6 +142,61 @@ class StripeWebhookView(View):
                     logger.info(f"Stripe webhook: payment failed for {user_id}")
                 except UserMembership.DoesNotExist:
                     pass
+
+        elif event_type == "invoice.paid":
+            invoice = event.data.object
+            if invoice.billing_reason == "subscription_cycle":
+                subscription_id = invoice.subscription
+                try:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    metadata = getattr(subscription, 'metadata', None)
+                    if metadata and getattr(metadata, 'purpose', None) == "membership":
+                        user_id = getattr(metadata, 'user_id', None)
+                        plan_id = getattr(metadata, 'plan_id', None)
+                        if user_id and plan_id:
+                            membership = UserMembership.objects.get(user_id=user_id)
+                            plan = MembershipPlan.objects.get(id=plan_id)
+                            
+                            # Renew membership
+                            membership.end_date = membership.end_date + relativedelta(months=plan.duration_months)
+                            membership.status = "active"
+                            membership.save()
+
+                            MembershipPayment.objects.create(
+                                user=membership.user,
+                                membership=membership,
+                                amount=plan.price,
+                                status="success",
+                                stripe_event_id=event.id
+                            )
+                            logger.info(f"Stripe webhook: auto-renewal successful for {user_id}")
+                except Exception as e:
+                    logger.error(f"Error processing auto-renewal for invoice {invoice.id}: {e}")
+
+        elif event_type == "invoice.payment_failed":
+            invoice = event.data.object
+            if invoice.billing_reason == "subscription_cycle":
+                subscription_id = invoice.subscription
+                try:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    metadata = getattr(subscription, 'metadata', None)
+                    if metadata and getattr(metadata, 'purpose', None) == "membership":
+                        user_id = getattr(metadata, 'user_id', None)
+                        if user_id:
+                            membership = UserMembership.objects.get(user_id=user_id)
+                            membership.status = "past_due"
+                            membership.save()
+
+                            MembershipPayment.objects.create(
+                                user=membership.user,
+                                membership=membership,
+                                amount=0,
+                                status="failed",
+                                stripe_event_id=event.id
+                            )
+                            logger.info(f"Stripe webhook: auto-renewal failed for {user_id}")
+                except Exception as e:
+                    logger.error(f"Error processing renewal failure for invoice {invoice.id}: {e}")
 
         return HttpResponse(status=200)
 
