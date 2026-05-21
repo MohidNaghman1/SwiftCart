@@ -6,7 +6,6 @@ class MembershipPlan(models.Model):
     name = models.CharField(max_length=50)
     duration_months = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    stripe_price_id = models.CharField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

@@ -12,7 +12,7 @@ from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 
-from Swiftcart.utils import api_response, build_absolute_uri
+from Swiftcart.utils import api_response, build_absolute_uri, convert_pkr_to_usd_cents
 from products.models import Product
 
 from .models import Order, OrderItem
@@ -161,7 +161,7 @@ class StripeCheckoutInitView(APIView):
 					'price_data': {
 						'currency': 'usd',
 						'product_data': {'name': product.name},
-						'unit_amount': int(product.price * 100),
+						'unit_amount': convert_pkr_to_usd_cents(product.price),
 					},
 					'quantity': quantity,
 				}

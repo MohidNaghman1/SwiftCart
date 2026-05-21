@@ -1,421 +1,462 @@
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <style>
-    :root {
-        --primary: #ffffff;
-        --background: #0f172a;
-        --surface: rgba(30, 41, 59, 0.7);
-        --surface-hover: rgba(51, 65, 85, 0.8);
-        --border: rgba(148, 163, 184, 0.2);
-        --accent: #3b82f6;
-        --accent-hover: #2563eb;
-        --text-main: #f8fafc;
-        --text-muted: #94a3b8;
-        --error: #ef4444;
-        --success: #10b981;
-        --glass-blur: blur(12px);
-    }
+  :root {
+    --primary: #ffffff;
+    --background: #0f172a;
+    --surface: rgba(30, 41, 59, 0.7);
+    --surface-hover: rgba(51, 65, 85, 0.8);
+    --border: rgba(148, 163, 184, 0.2);
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --error: #ef4444;
+    --success: #10b981;
+    --glass-blur: blur(12px);
+  }
 
-    .membership-container {
-        max-width: 1000px;
-        margin: 40px auto;
-        padding: 20px;
-        font-family: 'Inter', system-ui, sans-serif;
-        color: var(--text-main);
-    }
+  .membership-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    font-family: "Inter", system-ui, sans-serif;
+    color: var(--text-main);
+  }
 
-    #screen-plans {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 30px;
-    }
+  #screen-plans {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
 
-    .plans-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-        width: 100%;
-    }
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+  }
 
-    .plan-card {
-        background: var(--surface);
-        backdrop-filter: var(--glass-blur);
-        -webkit-backdrop-filter: var(--glass-blur);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 32px;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        overflow: hidden;
-    }
+  .plan-card {
+    background: var(--surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+  }
 
-    .plan-card:hover {
-        transform: translateY(-8px);
-        background: var(--surface-hover);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
+  .plan-card:hover {
+    transform: translateY(-8px);
+    background: var(--surface-hover);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
 
-    .plan-card.selected {
-        border-color: var(--accent);
-        background: rgba(59, 130, 246, 0.1);
-        box-shadow: 0 0 0 2px var(--accent);
-    }
+  .plan-card.selected {
+    border-color: var(--accent);
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
 
-    .plan-card.loading {
-        animation: pulse 1.5s infinite;
-        pointer-events: none;
-    }
+  .plan-card.loading {
+    animation: pulse 1.5s infinite;
+    pointer-events: none;
+  }
 
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.6; }
-        100% { opacity: 1; }
+  @keyframes pulse {
+    0% {
+      opacity: 1;
     }
-
-    .badge {
-        position: absolute;
-        top: 0;
-        right: 0;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        color: white;
-        font-size: 12px;
-        font-weight: 600;
-        padding: 6px 16px;
-        border-bottom-left-radius: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    50% {
+      opacity: 0.6;
     }
-
-    .plan-name {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
+    100% {
+      opacity: 1;
     }
+  }
 
-    .plan-price {
-        font-size: 42px;
-        font-weight: 800;
-        margin: 16px 0;
-        background: linear-gradient(to right, #60a5fa, #a78bfa);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
+  .badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-bottom-left-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-    .plan-duration {
-        font-size: 14px;
-        color: var(--text-muted);
-    }
+  .plan-name {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
 
-    #screen-payment {
-        display: none;
-        opacity: 0;
-        transition: opacity 0.5s ease;
-    }
+  .plan-price {
+    font-size: 42px;
+    font-weight: 800;
+    margin: 16px 0;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 
-    #screen-payment.active {
-        display: block;
-        opacity: 1;
-    }
+  .plan-duration {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
 
+  #screen-payment {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  #screen-payment.active {
+    display: block;
+    opacity: 1;
+  }
+
+  .payment-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background: var(--surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px;
+  }
+
+  @media (max-width: 768px) {
     .payment-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 40px;
-        background: var(--surface);
-        backdrop-filter: var(--glass-blur);
-        -webkit-backdrop-filter: var(--glass-blur);
-        border: 1px solid var(--border);
-        border-radius: 24px;
-        padding: 40px;
+      grid-template-columns: 1fr;
+      padding: 24px;
     }
+  }
 
-    @media (max-width: 768px) {
-        .payment-layout {
-            grid-template-columns: 1fr;
-            padding: 24px;
-        }
-    }
+  .order-summary {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 32px;
+  }
 
-    .order-summary {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 16px;
-        padding: 32px;
-    }
+  .summary-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-muted);
+  }
 
-    .summary-title {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 24px;
-        color: var(--text-muted);
-    }
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    font-size: 16px;
+  }
 
-    .summary-item {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        font-size: 16px;
-    }
+  .summary-total {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+  }
 
-    .summary-total {
-        margin-top: 24px;
-        padding-top: 24px;
-        border-top: 1px solid var(--border);
-        font-size: 24px;
-        font-weight: 700;
-        display: flex;
-        justify-content: space-between;
-    }
+  .change-plan {
+    display: inline-block;
+    margin-top: 24px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    cursor: pointer;
+  }
 
-    .change-plan {
-        display: inline-block;
-        margin-top: 24px;
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.2s;
-        cursor: pointer;
-    }
+  .change-plan:hover {
+    color: var(--accent-hover);
+  }
 
-    .change-plan:hover {
-        color: var(--accent-hover);
-    }
+  .card-form-container {
+    padding: 16px 0;
+  }
 
-    .card-form-container {
-        padding: 16px 0;
-    }
+  .form-group {
+    margin-bottom: 24px;
+  }
 
-    .form-group {
-        margin-bottom: 24px;
-    }
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+  }
 
-    .form-label {
-        display: block;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
-        color: var(--text-muted);
-    }
+  .form-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text-main);
+    font-size: 16px;
+    transition: border-color 0.2s;
+  }
 
-    .form-input {
-        width: 100%;
-        background: rgba(0, 0, 0, 0.2);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 16px;
-        color: var(--text-main);
-        font-size: 16px;
-        transition: border-color 0.2s;
-    }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
 
-    .form-input:focus {
-        outline: none;
-        border-color: var(--accent);
-    }
+  #card-element {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-height: 44px;
+  }
 
-    #card-element {
-        background: rgba(0, 0, 0, 0.2);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 16px;
-        min-height: 44px;
-    }
+  #card-errors {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 8px;
+    min-height: 20px;
+  }
 
-    #card-errors {
-        color: var(--error);
-        font-size: 13px;
-        margin-top: 8px;
-        min-height: 20px;
-    }
+  #submit-btn {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 16px;
+  }
 
-    #submit-btn {
-        width: 100%;
-        background: var(--accent);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 16px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-        margin-top: 16px;
-    }
+  #submit-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
 
-    #submit-btn:hover:not(:disabled) {
-        background: var(--accent-hover);
-    }
+  #submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 
-    #submit-btn:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
+  .secure-text {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
 
-    .secure-text {
-        text-align: center;
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-    }
+  #payment-message {
+    display: none;
+    text-align: center;
+    padding: 16px;
+    border-radius: 12px;
+    margin-top: 16px;
+    font-weight: 500;
+  }
 
-    #payment-message {
-        display: none;
-        text-align: center;
-        padding: 16px;
-        border-radius: 12px;
-        margin-top: 16px;
-        font-weight: 500;
-    }
+  #payment-message.success {
+    display: block;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
 
-    #payment-message.success {
-        display: block;
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--success);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-    }
-    
-    #screen-plans-error {
-        color: var(--error);
-        text-align: center;
-        min-height: 20px;
-    }
+  #screen-plans-error {
+    color: var(--error);
+    text-align: center;
+    min-height: 20px;
+  }
 </style>
 
 <div class="membership-container">
-    <div id="screen-plans">
-        <h1 style="font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 10px;">Choose Your Plan</h1>
-        <p style="color: var(--text-muted); text-align: center; margin-bottom: 40px;">Unlock premium features with SwiftCart memberships.</p>
-        
-        <div id="screen-plans-error"></div>
+  <div id="screen-plans">
+    <h1
+      style="
+        font-size: 36px;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 10px;
+      "
+    >
+      Choose Your Plan
+    </h1>
+    <p
+      style="color: var(--text-muted); text-align: center; margin-bottom: 40px"
+    >
+      Unlock premium features with SwiftCart memberships.
+    </p>
 
-        <div class="plans-grid">
-            {% for plan in plans %}
-            <div class="plan-card" data-plan-id="{{ plan.id }}" data-plan-name="{{ plan.name }}" data-plan-price="{{ plan.price }}" data-plan-duration="{{ plan.duration_months }}">
-                {% if plan.duration_months == 6 %}
-                <div class="badge">Best Value</div>
-                {% endif %}
-                <div class="plan-name">{{ plan.name }}</div>
-                <div class="plan-price">${{ plan.price }}</div>
-                <div class="plan-duration">
-                    {% if plan.duration_months == 1 %}
-                        Billed Monthly
-                    {% elif plan.duration_months == 6 %}
-                        Billed Every 6 Months
-                    {% elif plan.duration_months == 12 %}
-                        Billed Yearly
-                    {% else %}
-                        Billed every {{ plan.duration_months }} months
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
+    <div id="screen-plans-error"></div>
+
+    <div class="plans-grid">
+      {% for plan in plans %}
+      <div
+        class="plan-card"
+        data-plan-id="{{ plan.id }}"
+        data-plan-name="{{ plan.name }}"
+        data-plan-price="{{ plan.price }}"
+        data-plan-duration="{{ plan.duration_months }}"
+      >
+        {% if plan.duration_months == 6 %}
+        <div class="badge">Best Value</div>
+        {% endif %}
+        <div class="plan-name">{{ plan.name }}</div>
+        <div class="plan-price">PKR {{ plan.price }}</div>
+        <div class="plan-duration">
+          {% if plan.duration_months == 1 %} Billed Monthly {% elif
+          plan.duration_months == 6 %} Billed for 6 Months {% elif
+          plan.duration_months == 12 %} Billed Yearly {% else %} Billed every {{
+          plan.duration_months }} months {% endif %}
         </div>
+      </div>
+      {% endfor %}
     </div>
+  </div>
 
-    <div id="screen-payment">
-        <div class="payment-layout">
-            <div class="order-summary">
-                <div class="summary-title">Order Summary</div>
-                <div class="summary-item">
-                    <span id="summary-plan-name">Plan Name</span>
-                    <span id="summary-plan-price">$0.00</span>
-                </div>
-                <div class="summary-item" style="color: var(--text-muted); font-size: 14px;">
-                    <span>Billing Cycle</span>
-                    <span id="summary-plan-cycle">Monthly</span>
-                </div>
-                
-                <div class="summary-total">
-                    <span>Total due today</span>
-                    <span id="summary-total-price">$0.00</span>
-                </div>
-                
-                <a class="change-plan" id="btn-change-plan">← Change plan</a>
-            </div>
-
-            <div class="card-form-container">
-                <form id="payment-form">
-                    <div class="form-group">
-                        <label class="form-label" for="cardholder-name">Cardholder Name</label>
-                        <input type="text" id="cardholder-name" class="form-input" placeholder="Jane Doe" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Card Details</label>
-                        <div id="card-element"></div>
-                        <div id="card-errors" role="alert"></div>
-                    </div>
-
-                    <button type="submit" id="submit-btn">
-                        <span id="button-text">Subscribe</span>
-                    </button>
-                    
-                    <div id="payment-message"></div>
-
-                    <div class="secure-text">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        Secured by Stripe. Cancel anytime.
-                    </div>
-                </form>
-            </div>
+  <div id="screen-payment">
+    <div class="payment-layout">
+      <div class="order-summary">
+        <div class="summary-title">Order Summary</div>
+        <div class="summary-item">
+          <span id="summary-plan-name">Plan Name</span>
+          <span id="summary-plan-price">PKR 0.00</span>
         </div>
+        <div
+          class="summary-item"
+          style="color: var(--text-muted); font-size: 14px"
+        >
+          <span>Billing Cycle</span>
+          <span id="summary-plan-cycle">Monthly</span>
+        </div>
+
+        <div class="summary-total">
+          <span>Total due today</span>
+          <span id="summary-total-price">PKR 0.00</span>
+        </div>
+
+        <a class="change-plan" id="btn-change-plan">← Change plan</a>
+      </div>
+
+      <div class="card-form-container">
+        <form id="payment-form">
+          <div class="form-group">
+            <label class="form-label" for="cardholder-name"
+              >Cardholder Name</label
+            >
+            <input
+              type="text"
+              id="cardholder-name"
+              class="form-input"
+              placeholder="Jane Doe"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Card Details</label>
+            <div id="card-element"></div>
+            <div id="card-errors" role="alert"></div>
+          </div>
+
+          <button type="submit" id="submit-btn">
+            <span id="button-text">Subscribe</span>
+          </button>
+
+          <div id="payment-message"></div>
+
+          <div class="secure-text">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Secured by Stripe. Cancel anytime.
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+  document.addEventListener("DOMContentLoaded", function () {
     function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === name + "=") {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
         }
-        return cookieValue;
+      }
+      return cookieValue;
     }
 
     const stripe = Stripe("{{ stripe_publishable_key }}");
     const elements = stripe.elements();
-    
+
     const cardStyle = {
-        base: {
-            color: "#f8fafc",
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSmoothing: "antialiased",
-            fontSize: "16px",
-            "::placeholder": {
-                color: "#94a3b8"
-            },
-            iconColor: "#3b82f6"
+      base: {
+        color: "#f8fafc",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontSmoothing: "antialiased",
+        fontSize: "16px",
+        "::placeholder": {
+          color: "#94a3b8",
         },
-        invalid: {
-            color: "#ef4444",
-            iconColor: "#ef4444"
-        }
+        iconColor: "#3b82f6",
+      },
+      invalid: {
+        color: "#ef4444",
+        iconColor: "#ef4444",
+      },
     };
-    
+
     const cardElement = elements.create("card", { style: cardStyle });
     cardElement.mount("#card-element");
-    
+
     let selectedPlanId = null;
     let selectedClientSecret = null;
-    
+
     const screenPlans = document.getElementById("screen-plans");
     const screenPayment = document.getElementById("screen-payment");
     const planCards = document.querySelectorAll(".plan-card");
@@ -426,112 +467,121 @@ document.addEventListener("DOMContentLoaded", function() {
     const buttonText = document.getElementById("button-text");
     const paymentForm = document.getElementById("payment-form");
     const paymentMessage = document.getElementById("payment-message");
-    
-    cardElement.on("change", event => {
-        if (event.error) {
-            cardErrors.textContent = event.error.message;
-        } else {
-            cardErrors.textContent = "";
-        }
-    });
-    
-    planCards.forEach(card => {
-        card.addEventListener("click", async function() {
-            plansError.textContent = "";
-            planCards.forEach(c => c.classList.remove("selected", "loading"));
-            
-            const cardElem = this;
-            cardElem.classList.add("selected", "loading");
-            selectedPlanId = cardElem.getAttribute("data-plan-id");
-            
-            const planName = cardElem.getAttribute("data-plan-name");
-            const planPrice = cardElem.getAttribute("data-plan-price");
-            const planDuration = parseInt(cardElem.getAttribute("data-plan-duration"));
-            
-            try {
-                const response = await fetch("{% url 'memberships:subscribe' %}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                        "X-CSRFToken": getCookie("csrftoken")
-                    },
-                    body: "plan_id=" + encodeURIComponent(selectedPlanId)
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || "Failed to initialize payment");
-                }
-                
-                selectedClientSecret = data.client_secret;
-                
-                document.getElementById("summary-plan-name").textContent = planName;
-                document.getElementById("summary-plan-price").textContent = "$" + planPrice;
-                document.getElementById("summary-total-price").textContent = "$" + planPrice;
-                
-                let cycleText = "Billed every " + planDuration + " months";
-                if (planDuration === 1) cycleText = "Monthly";
-                if (planDuration === 6) cycleText = "Every 6 months";
-                if (planDuration === 12) cycleText = "Yearly";
-                document.getElementById("summary-plan-cycle").textContent = cycleText;
-                
-                screenPlans.style.display = "none";
-                screenPayment.classList.add("active");
-                cardElem.classList.remove("loading");
-                
-            } catch (error) {
-                cardElem.classList.remove("loading");
-                plansError.textContent = error.message;
-            }
-        });
-    });
-    
-    btnChangePlan.addEventListener("click", function() {
-        screenPayment.classList.remove("active");
-        setTimeout(() => {
-            screenPlans.style.display = "flex";
-            selectedPlanId = null;
-            selectedClientSecret = null;
-            planCards.forEach(c => c.classList.remove("selected"));
-        }, 300);
-    });
-    
-    paymentForm.addEventListener("submit", async function(e) {
-        e.preventDefault();
-        
-        const cardholderName = document.getElementById("cardholder-name").value.trim();
-        
-        if (!cardholderName) {
-            cardErrors.textContent = "Please enter cardholder name.";
-            return;
-        }
-        
-        submitBtn.disabled = true;
-        buttonText.textContent = "Processing...";
+
+    cardElement.on("change", (event) => {
+      if (event.error) {
+        cardErrors.textContent = event.error.message;
+      } else {
         cardErrors.textContent = "";
-        
-        const result = await stripe.confirmCardPayment(selectedClientSecret, {
-            payment_method: {
-                card: cardElement,
-                billing_details: { name: cardholderName }
-            }
-        });
-        
-        if (result.error) {
-            cardErrors.textContent = result.error.message;
-            submitBtn.disabled = false;
-            buttonText.textContent = "Subscribe";
-        } else if (result.paymentIntent && result.paymentIntent.status === "succeeded") {
-            paymentMessage.textContent = "Payment successful! Activating membership...";
-            paymentMessage.className = "success";
-            paymentForm.style.display = "none";
-            
-            setTimeout(() => {
-                window.location.href = "{% url 'memberships:success' %}";
-            }, 2000);
-        }
+      }
     });
-});
+
+    planCards.forEach((card) => {
+      card.addEventListener("click", async function () {
+        plansError.textContent = "";
+        planCards.forEach((c) => c.classList.remove("selected", "loading"));
+
+        const cardElem = this;
+        cardElem.classList.add("selected", "loading");
+        selectedPlanId = cardElem.getAttribute("data-plan-id");
+
+        const planName = cardElem.getAttribute("data-plan-name");
+        const planPrice = cardElem.getAttribute("data-plan-price");
+        const planDuration = parseInt(
+          cardElem.getAttribute("data-plan-duration"),
+        );
+
+        try {
+          const response = await fetch("{% url 'memberships:subscribe' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: "plan_id=" + encodeURIComponent(selectedPlanId),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to initialize payment");
+          }
+
+          selectedClientSecret = data.client_secret;
+
+          document.getElementById("summary-plan-name").textContent = planName;
+          document.getElementById("summary-plan-price").textContent =
+            "PKR " + planPrice;
+          document.getElementById("summary-total-price").textContent =
+            "PKR " + planPrice;
+
+          let cycleText = planDuration + " months";
+          if (planDuration === 1) cycleText = "Monthly";
+          if (planDuration === 6) cycleText = "6 Months";
+          if (planDuration === 12) cycleText = "Yearly";
+          document.getElementById("summary-plan-cycle").textContent = cycleText;
+
+          screenPlans.style.display = "none";
+          screenPayment.classList.add("active");
+          cardElem.classList.remove("loading");
+        } catch (error) {
+          cardElem.classList.remove("loading");
+          plansError.textContent = error.message;
+        }
+      });
+    });
+
+    btnChangePlan.addEventListener("click", function () {
+      screenPayment.classList.remove("active");
+      setTimeout(() => {
+        screenPlans.style.display = "flex";
+        selectedPlanId = null;
+        selectedClientSecret = null;
+        planCards.forEach((c) => c.classList.remove("selected"));
+      }, 300);
+    });
+
+    paymentForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const cardholderName = document
+        .getElementById("cardholder-name")
+        .value.trim();
+
+      if (!cardholderName) {
+        cardErrors.textContent = "Please enter cardholder name.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      buttonText.textContent = "Processing...";
+      cardErrors.textContent = "";
+
+      const result = await stripe.confirmCardPayment(selectedClientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: { name: cardholderName },
+        },
+      });
+
+      if (result.error) {
+        cardErrors.textContent = result.error.message;
+        submitBtn.disabled = false;
+        buttonText.textContent = "Subscribe";
+      } else if (
+        result.paymentIntent &&
+        result.paymentIntent.status === "succeeded"
+      ) {
+        paymentMessage.textContent =
+          "Payment successful! Activating membership...";
+        paymentMessage.className = "success";
+        paymentForm.style.display = "none";
+
+        setTimeout(() => {
+          window.location.href = "{% url 'memberships:success' %}";
+        }, 2000);
+      }
+    });
+  });
 </script>
 {% endblock %}
